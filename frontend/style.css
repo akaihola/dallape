@@ -1,0 +1,26 @@
+:root { --fg: #1c1b1a; --muted: #6b6864; --bg: #f7f5f1; --accent: #b3462a; --ring: #ddd8d0; --disabled: #c9c4bc; }
+* { box-sizing: border-box; }
+body { margin: 0 auto; max-width: 64rem; padding: 1.5rem 1rem 3rem; font: 16px/1.4 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+h1 { margin: 0 0 .25rem; font-size: 2rem; }
+header p, #hint { margin: 0 0 1rem; color: var(--muted); }
+#video-form { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+#video-input { flex: 1 1 20rem; padding: .5rem .75rem; font: inherit; border: 1px solid var(--disabled); border-radius: .4rem; }
+button { padding: .5rem 1rem; font: inherit; border: 0; border-radius: .4rem; background: var(--accent); color: #fff; cursor: pointer; }
+button:disabled { background: var(--disabled); cursor: not-allowed; }
+#video-error:not(:empty) { flex-basis: 100%; color: var(--accent); }
+#player-wrap { aspect-ratio: 16 / 9; margin-bottom: 1rem; }
+#player-wrap iframe, #player { width: 100%; height: 100%; border: 0; }
+#formats { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: .75rem; }
+.format { display: flex; flex-direction: column; align-items: center; gap: .35rem; padding: .75rem .5rem; border-radius: .6rem; background: #fff; border: 2px solid transparent; }
+.format.active { border-color: var(--accent); }
+.format.disabled { opacity: .4; }
+.format.error .codec { color: var(--accent); }
+.pick { display: flex; flex-direction: column; align-items: center; gap: .1rem; padding: 0; background: none; color: inherit; }
+.ring { width: 4.5rem; height: 4.5rem; transform: rotate(-90deg); }
+.ring .bg { fill: none; stroke: var(--ring); stroke-width: 3; }
+.ring .fill { fill: none; stroke: var(--accent); stroke-width: 3; stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset .2s linear; }
+.ring .pos { fill: var(--fg); visibility: hidden; }
+.format.active .ring .pos { visibility: visible; }
+.codec { font-weight: 600; }
+.abr, .ext, .size { font-size: .85rem; color: var(--muted); }
+.download { font-size: .85rem; color: var(--accent); }

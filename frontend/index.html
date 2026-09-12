@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dallapé – sound track audio format comparison and download</title>
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+</head>
+<body>
+<header>
+  <h1>Dallapé</h1>
+  <p>Compare and download video sound tracks in various formats.</p>
+</header>
+<form id="video-form">
+  <input id="video-input" type="text" placeholder="YouTube URL or video ID" autocomplete="off" spellcheck="false" required>
+  <button type="submit">Preview</button>
+  <output id="video-error"></output>
+</form>
+<div id="player-wrap" hidden><div id="player"></div></div>
+<p id="hint" hidden>Click an audio format to hear the video with that track. The ring fills as the track downloads; the dot marks the playback position.</p>
+<section id="formats" hidden></section>
+<audio id="audio" hidden></audio>
+<script type="module" src="app.js"></script>
+</body>
+</html>
