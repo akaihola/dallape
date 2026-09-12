@@ -78,7 +78,7 @@ def test_audio_streams(canned, monkeypatch):
     assert r.content == b"abcde"
     assert r.headers["content-length"] == "5"
     assert r.headers["content-type"] == "audio/webm"
-    assert r.headers["content-disposition"] == "attachment; filename*=UTF-8''Never%20/%20Gonna.webm"
+    assert r.headers["content-disposition"] == "attachment; filename*=UTF-8''Never%20%2F%20Gonna.webm"
 
 
 def test_read_chunks_uses_ranges(monkeypatch):

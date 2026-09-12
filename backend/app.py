@@ -126,7 +126,7 @@ def audio(url: str, format: str):
     if format not in {f["format_id"] for f in audio_formats(info)}:
         raise HTTPException(404, "no such audio format")
     fmt = next(f for f in info["formats"] if f["format_id"] == format)
-    filename = quote(f"{info.get('title') or info['id']}.{fmt['ext']}")
+    filename = quote(f"{info.get('title') or info['id']}.{fmt['ext']}", safe="")
     headers = {"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
     if fmt.get("filesize"):
         headers["Content-Length"] = str(fmt["filesize"])
