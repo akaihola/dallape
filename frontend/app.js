@@ -4,7 +4,7 @@ const API = window.DALLAPE_API_BASE ?? "";
 const audio = document.getElementById("audio");
 const formatsEl = document.getElementById("formats");
 const errorEl = document.getElementById("video-error");
-const videos = new Map(); // video id -> { id, title, formats: null | Set(ids), tracks: Map(format id -> track), wanted }
+const videos = new Map(); // video id -> { id, title, formats: null | Set(ids), loading, tracks: Map(format id -> track), wanted }
 let video = null; // state of the video in the player
 let player = null;
 let activeFormat = null;
@@ -36,7 +36,7 @@ document.getElementById("video-form").addEventListener("submit", async (e) => {
   errorEl.value = parsed ? "" : "Not a recognised video URL or ID.";
   if (!parsed || parsed.id === video?.id) return;
   stopAudio();
-  if (!videos.has(parsed.id)) videos.set(parsed.id, { id: parsed.id, title: null, formats: null, tracks: new Map(), wanted: null });
+  if (!videos.has(parsed.id)) videos.set(parsed.id, { id: parsed.id, title: null, formats: null, loading: null, tracks: new Map(), wanted: null });
   video = videos.get(parsed.id);
   await showVideo(video.id);
   document.getElementById("hint").hidden = formatsEl.hidden = false;
@@ -77,7 +77,7 @@ async function pick(fmt) {
   const v = video;
   errorEl.value = "";
   try {
-    if (!v.formats) await loadFormats(v); // first click only
+    if (!v.formats) await (v.loading ??= loadFormats(v)); // first click only, shared by concurrent clicks
   } catch (err) {
     errorEl.value = `Could not list audio formats: ${err.message}`;
     return;
@@ -92,7 +92,7 @@ async function pick(fmt) {
 // --- tracks ---------------------------------------------------------------
 
 async function fetchTrack(v, fmt) {
-  const track = { fmt, chunks: [], received: 0, total: 0, done: false, error: null, append: null, finish: null, blobUrl: null };
+  const track = { fmt, chunks: [], received: 0, total: 0, done: false, append: null, finish: null, blobUrl: null };
   v.tracks.set(fmt.id, track);
   try {
     const res = await api("/api/audio", { url: v.id, format: fmt.id });
@@ -112,8 +112,8 @@ async function fetchTrack(v, fmt) {
     track.blobUrl = URL.createObjectURL(new Blob(track.chunks, { type: fmt.mime.split(";")[0] }));
     track.finish?.();
   } catch (err) {
-    track.error = err.message;
-    v.tracks.delete(fmt.id);
+    v.tracks.delete(fmt.id); // allow a retry on the next click
+    if (v === video) errorEl.value = `Could not fetch ${fmt.codec} ${fmt.abr} kbps: ${err.message}`;
   }
   if (v === video) { render(); maybeSwitch(v); }
 }
@@ -145,7 +145,7 @@ function attachTrack(track) {
     const pump = () => {
       if (sb.updating || ms.readyState !== "open") return;
       if (queue.length) {
-        try { sb.appendBuffer(queue.shift()); } catch { queue.length = 0; track.append = null; track.finish = () => attachTrack(track); }
+        try { sb.appendBuffer(queue.shift()); } catch { queue.length = 0; track.append = null; track.finish = () => attachTrack(track); if (track.done) track.finish(); }
       } else if (track.done) ms.endOfStream();
     };
     sb.addEventListener("updateend", pump);
@@ -184,7 +184,6 @@ function render() {
     const track = video.tracks.get(id);
     el.classList.toggle("disabled", !!video.formats && !video.formats.has(id));
     el.classList.toggle("active", activeFormat === id);
-    el.classList.toggle("error", !!track?.error);
     el.querySelector(".pick").disabled = !!video.formats && !video.formats.has(id);
     const fraction = track ? (track.done ? 1 : track.total ? track.received / track.total : 0) : 0;
     el.querySelector(".fill").style.strokeDashoffset = 100 - fraction * 100;

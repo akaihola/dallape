@@ -14,7 +14,6 @@ button:disabled { background: var(--disabled); cursor: not-allowed; }
 .format { display: flex; flex-direction: column; align-items: center; gap: .35rem; padding: .75rem .5rem; border-radius: .6rem; background: #fff; border: 2px solid transparent; }
 .format.active { border-color: var(--accent); }
 .format.disabled { opacity: .4; }
-.format.error .codec { color: var(--accent); }
 .pick { display: flex; flex-direction: column; align-items: center; gap: .1rem; padding: 0; background: none; color: inherit; }
 .ring { width: 4.5rem; height: 4.5rem; transform: rotate(-90deg); }
 .ring .bg { fill: none; stroke: var(--ring); stroke-width: 3; }
