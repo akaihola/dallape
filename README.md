@@ -72,5 +72,43 @@ to zero when not in use.
 The API is a RESTful API that provides access to the backend's functionality.
 It is also exposed as a public API that can be used by other applications.
 
+## Running and deploying
+
+### Local development
+
+```sh
+cd backend
+uv run pytest                      # backend unit tests
+uv run uvicorn app:app --reload    # serves the API and ../frontend on http://localhost:8000/
+node --test frontend/tests/        # frontend unit tests (from the repository root)
+```
+
+### Backend on Google Cloud Run
+
+The backend keeps no state between requests, so it can scale to zero. Deploy
+it straight from `backend/` (the Dockerfile is used because one is present):
+
+```sh
+gcloud run deploy dallape-api --source backend --region <region> \
+  --min-instances 0 --timeout 900 --allow-unauthenticated \
+  --set-env-vars ALLOWED_ORIGINS=https://dallape.vempai.men
+```
+
+Optional environment variables: `ALLOWED_ORIGINS` (comma-separated CORS
+origins, default `*`) and `YTDLP_COOKIEFILE` (path to a Netscape cookie file
+mounted into the container, for videos YouTube refuses to serve to anonymous
+datacenter clients).
+
+yt-dlp breaks whenever YouTube changes; run `uv lock --upgrade-package yt-dlp`
+in `backend/` and redeploy to pick up fixes.
+
+### Frontend on a CDN
+
+`frontend/` is plain static files with no build step. Set the Cloud Run
+service URL in `frontend/config.js` and upload the directory to any static
+host (a Cloud Storage bucket behind Cloud CDN, Cloudflare Pages, Firebase
+Hosting, …). The frontend contacts the backend only to list the formats of a
+video (once, on the first format click) and to fetch each audio track (once).
+
 [dallape.vempai.men]: https://dallape.vempai.men
 [yt-dlp]: https://github.com/yt-dlp/yt-dlp
