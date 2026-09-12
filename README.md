@@ -109,6 +109,7 @@ service URL in `frontend/config.js` and upload the directory to any static
 host (a Cloud Storage bucket behind Cloud CDN, Cloudflare Pages, Firebase
 Hosting, …). The frontend contacts the backend only to list the formats of a
 video (once, on the first format click) and to fetch each audio track (once).
+Download progress is derived from the streamed bytes, so no polling is needed.
 
 [dallape.vempai.men]: https://dallape.vempai.men
 [yt-dlp]: https://github.com/yt-dlp/yt-dlp
