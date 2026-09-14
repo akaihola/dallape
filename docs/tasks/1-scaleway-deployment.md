@@ -6,9 +6,12 @@ title: Validate Scaleway Serverless Containers deployment
 
 ## Result
 
-Blocked at provider deployment: this workspace has no Scaleway credentials,
-project, registry image, or `scw` CLI configuration. A test service therefore
-could not be created, and yt-dlp could not be validated from a Scaleway IP.
+Blocked at provider deployment: the documented Scaleway secret file exists and
+the image builds, but it provides only an access ID and API key. Scaleway's
+project API requires an organization UUID; project discovery returned HTTP 400
+(`organization_id` is required/invalid), so no project, registry namespace, or
+test service could be created. The `scw` CLI is also unavailable. Therefore
+yt-dlp could not be validated from a Scaleway IP.
 `frontend/config.js` remains unchanged; Cloud Run remains the fallback.
 
 ## Container assumptions
@@ -32,6 +35,8 @@ credentials are available:
 ## Checks completed
 
 - `python3 /home/agent/prg/syncop/tools/check_tasks_md.py TASKS.md` passes.
+- `podman build -t dallape-backend:scaleway-check backend/` succeeds with the
+  existing Dockerfile.
 - `UV_CACHE_DIR=/tmp/dallape-uv-cache uv run pytest` starts successfully and
   exercises 22 tests; the sandbox command timed out while the suite was still
   running, so it is not recorded as a completed pass.
