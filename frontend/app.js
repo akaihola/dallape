@@ -191,7 +191,7 @@ function render() {
     el.querySelector(".size").textContent = track?.done ? fmtSize(track.received) : track ? `${Math.round(fraction * 100)} %` : "";
     const a = el.querySelector(".download");
     a.hidden = !track?.done;
-    if (track?.done) { a.href = track.blobUrl; a.download = `${video.title ?? video.id}.${track.fmt.ext}`; }
+    if (track?.done) { a.href = track.blobUrl; a.download = `${video.title ?? video.id} ${track.fmt.abr} kbps.${track.fmt.ext}`; }
   }
 }
 
