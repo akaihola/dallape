@@ -102,6 +102,26 @@ datacenter clients).
 yt-dlp breaks whenever YouTube changes; run `uv lock --upgrade-package yt-dlp`
 in `backend/` and redeploy to pick up fixes.
 
+### Backend on Fly.io or a VPS
+
+Build the image from `backend/` and publish it to a registry, then expose the
+container's port 8080. Fly.io sets `PORT` to the service port; the image uses
+that value and falls back to 8080. A VPS can run the same image with
+`-p 8080:8080` (or map another host port):
+
+```sh
+cd backend
+docker build -t dallape-backend .
+docker run --rm -p 8080:8080 \
+  -e ALLOWED_ORIGINS=https://dallape.vempai.men \
+  dallape-backend
+```
+
+Set `ALLOWED_ORIGINS` and, when needed, `YTDLP_COOKIEFILE` through the
+provider's secret or environment configuration. Do not bake cookie files or
+other credentials into the image. The backend is stateless; persistent
+volumes are unnecessary.
+
 ### Frontend on a CDN
 
 `frontend/` is plain static files with no build step. Set the Cloud Run
