@@ -11,13 +11,10 @@ Rules for TASKS.md usage are at the bottom of the file.
   YouTube from Scaleway IPs, response streaming and cold start before
   pointing `frontend/config.js` at it. Keep Cloud Run as the fallback.
 
-## Scheduled
+## In progress
 
 - [*] Create a `Dockerfile` for running the backend on Google Cloud Run, Fly.io,
   or an always-on VPS. Build and test it.
-
-## In progress
-
 - [*] Include `N kbps` in the downloaded file names.
 
 ## Completed
