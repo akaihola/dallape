@@ -16,9 +16,9 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Scheduled
 
-- [*] Include `N kbps` in the downloaded file names.
-
 ## In progress
+
+- [*] Include `N kbps` in the downloaded file names.
 
 ## Completed
 
