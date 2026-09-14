@@ -19,9 +19,12 @@ state, and streams `/api/audio` through FastAPI `StreamingResponse`. The image
 needs a registry push before deployment. Provider settings to validate when
 credentials are available:
 
-- public HTTP endpoint and unauthenticated invocation;
-- container port 8080, with the platform `PORT` value passed through;
-- scale-to-zero enabled and one active request minimum;
+- public HTTP endpoint (`Privacy=public`);
+- container port 8080, with the platform-injected `PORT` value passed through;
+- request-concurrency autoscaling with `min-scale=0` for scale-to-zero and a
+  bounded `max-scale` selected for the test;
+- request concurrency selected explicitly so long audio streams do not create
+  unnecessary instances;
 - request timeout at least 900 seconds for long audio streams;
 - `ALLOWED_ORIGINS=https://dallape.vempai.men`;
 - `YTDLP_COOKIEFILE` only when a separately mounted secret is required.
@@ -45,9 +48,17 @@ credentials are available:
   from a second request to `/api/formats`; do not point the frontend at the
   service unless both requests and an audio stream succeed.
 
+The provider assumptions above come from Scaleway's [deployment guide],
+[port documentation], [autoscaling reference], and [container limits].
+
 ## Follow-up
 
 With Scaleway access, build and push `backend/`, deploy the image using the
 settings above, run the three remote checks, and compare cold start, streaming,
 and yt-dlp success with the existing Cloud Run service. Only then set
 `window.DALLAPE_API_BASE` in `frontend/config.js` to the Scaleway URL.
+
+[deployment guide]: https://www.scaleway.com/en/docs/serverless-containers/api-cli/deploy-container-cli/
+[port documentation]: https://www.scaleway.com/en/docs/serverless-containers/reference-content/port-parameter-variable/
+[autoscaling reference]: https://www.scaleway.com/en/docs/serverless-containers/reference-content/containers-autoscaling/
+[container limits]: https://www.scaleway.com/en/docs/serverless-containers/reference-content/containers-limitations/
