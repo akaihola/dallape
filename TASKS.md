@@ -15,6 +15,8 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In progress
 
+- [*] If on a NixOS host with no `scw` installed but `comma` available, always use
+  `, scw` instead of just `scw`.
 - [1] Deploy the backend to Scaleway Serverless Containers, which charges no egress, as
   a cheaper alternative to Cloud Run. Validate yt-dlp against YouTube from Scaleway IPs,
   response streaming and cold start before pointing `frontend/config.js` at it. Keep
