@@ -40,7 +40,7 @@ Use the installed CLI when available. On NixOS, fall back to `comma` when
 ```bash
 if command -v scw >/dev/null 2>&1; then
   SCW=(scw)
-elif command -v comma >/dev/null 2>&1; then
+elif command -v , >/dev/null 2>&1; then
   SCW=(, scw)
 else
   printf '%s\n' 'scw and comma are unavailable' >&2
