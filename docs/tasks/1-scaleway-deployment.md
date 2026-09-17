@@ -6,12 +6,20 @@ title: Validate Scaleway Serverless Containers deployment
 
 ## Result
 
-Blocked at provider deployment: the documented Scaleway secret file exists and
-the image builds, but it provides only an access ID and API key. Scaleway's
-project API requires an organization UUID; project discovery returned HTTP 400
-(`organization_id` is required/invalid), so no project, registry namespace, or
-test service could be created. The `scw` CLI is also unavailable. Therefore
-yt-dlp could not be validated from a Scaleway IP.
+The earlier attempt was blocked at provider deployment: the documented
+Scaleway secret file exists and the image builds, but it provides only an access
+ID and API key. Scaleway's project API requires an organization UUID; project
+discovery returned HTTP 400 (`organization_id` is required/invalid), so no
+project, registry namespace, or test service could be created.
+
+This retry reproduced the missing global CLI (`command -v scw` failed). The
+comma path was available, so `, scw container namespace list` was attempted.
+Comma could not evaluate the Nix derivation because this environment cannot
+connect to `/nix/var/nix/daemon-socket/socket` (`Operation not permitted`); it
+also could not update its cache under `/home/agent/.local/state/comma` because
+that path is read-only. No Scaleway API request or yt-dlp validation from a
+Scaleway IP was possible. The command selection below remains usable on a host
+where comma can resolve the CLI.
 `frontend/config.js` remains unchanged; Cloud Run remains the fallback.
 
 ## Container assumptions
