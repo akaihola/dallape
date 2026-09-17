@@ -8,10 +8,9 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Scheduled
 
-- [*] Retry what task 5f5f0c2e-1492-41fc-bc30-4d7209808ebf tried, but now with `, scw`.
-
 ## In progress
 
+- [*] Retry what task 5f5f0c2e-1492-41fc-bc30-4d7209808ebf tried, but now with `, scw`.
 - [*] If on a NixOS host with no `scw` installed but `comma` available, always use
   `, scw` instead of just `scw`.
 - [1] Deploy the backend to Scaleway Serverless Containers, which charges no egress, as
