@@ -10,9 +10,6 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Scheduled
 
-- [*] If on a NixOS host with no `scw` installed but `comma` available, always use
-  `, scw` instead of just `scw`.
-
 ## In progress
 
 - [*] If on a NixOS host with no `scw` installed but `comma` available, always use
