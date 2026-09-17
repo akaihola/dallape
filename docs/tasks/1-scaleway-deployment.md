@@ -32,6 +32,28 @@ credentials are available:
 - `ALLOWED_ORIGINS=https://dallape.vempai.men`;
 - `YTDLP_COOKIEFILE` only when a separately mounted secret is required.
 
+## CLI invocation
+
+Use the installed CLI when available. On NixOS, fall back to `comma` when
+`scw` is not installed:
+
+```bash
+if command -v scw >/dev/null 2>&1; then
+  SCW=(scw)
+elif command -v comma >/dev/null 2>&1; then
+  SCW=(, scw)
+else
+  printf '%s\n' 'scw and comma are unavailable' >&2
+  exit 1
+fi
+
+"${SCW[@]}" container namespace list
+```
+
+Use the same `"${SCW[@]}"` prefix for subsequent Scaleway commands. This
+preserves direct `scw` execution on hosts where the CLI is installed and
+allows NixOS hosts to resolve it through `comma`.
+
 ## Checks completed
 
 - `python3 /home/agent/prg/syncop/tools/check_tasks_md.py TASKS.md` passes.
