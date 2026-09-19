@@ -10,18 +10,19 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In progress
 
-- [*] Retry what task 5f5f0c2e-1492-41fc-bc30-4d7209808ebf tried, but now with `, scw`.
-- [*] If on a NixOS host with no `scw` installed but `comma` available, always use
-  `, scw` instead of just `scw`.
 - [1] Deploy the backend to Scaleway Serverless Containers, which charges no egress, as
   a cheaper alternative to Cloud Run. Validate yt-dlp against YouTube from Scaleway IPs,
   response streaming and cold start before pointing `frontend/config.js` at it. Keep
   Cloud Run as the fallback.
+
+## Completed
+
+- [*] Retry what task 5f5f0c2e-1492-41fc-bc30-4d7209808ebf tried, but now with `, scw`.
+- [*] If on a NixOS host with no `scw` installed but `comma` available, always use
+  `, scw` instead of just `scw`.
 - [*] Create a `Dockerfile` for running the backend on Google Cloud Run, Fly.io, or an
   always-on VPS. Build and test it.
 - [*] Include `N kbps` in the downloaded file names.
-
-## Completed
 
 [*]: TASKS.md
 [1]: docs/tasks/1-scaleway-deployment.md
