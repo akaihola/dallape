@@ -10,10 +10,8 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In progress
 
-- [1] Deploy the backend to Scaleway Serverless Containers, which charges no egress, as
-  a cheaper alternative to Cloud Run. Validate yt-dlp against YouTube from Scaleway IPs,
-  response streaming and cold start before pointing `frontend/config.js` at it. Keep
-  Cloud Run as the fallback.
+- [1] Deploy and validate the backend on Scaleway Serverless Containers before
+  switching the frontend. Keep Cloud Run as the fallback.
 
 ## Completed
 

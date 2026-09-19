@@ -4,6 +4,13 @@ title: Validate Scaleway Serverless Containers deployment
 
 # Scaleway deployment validation
 
+## Goal and acceptance criteria
+
+Deploy the backend to Scaleway Serverless Containers, which charges no egress, as
+a cheaper alternative to Cloud Run. Validate yt-dlp against YouTube from Scaleway IPs,
+response streaming and cold start before pointing `frontend/config.js` at it. Keep
+Cloud Run as the fallback.
+
 ## Result
 
 The earlier attempt was blocked at provider deployment: the documented
@@ -12,8 +19,10 @@ ID and API key. Scaleway's project API requires an organization UUID; project
 discovery returned HTTP 400 (`organization_id` is required/invalid), so no
 project, registry namespace, or test service could be created.
 
-This retry reproduced the missing global CLI (`command -v scw` failed). The
-comma path was available, so `, scw container namespace list` was attempted.
+The comma retry, Kandev task `44d28237-42c8-47fc-8eff-af059dbd0c92`,
+retried task `5f5f0c2e-1492-41fc-bc30-4d7209808ebf` and reproduced the missing
+global CLI (`command -v scw` failed). The comma path was available, so
+`, scw container namespace list` was attempted.
 Comma could not evaluate the Nix derivation because this environment cannot
 connect to `/nix/var/nix/daemon-socket/socket` (`Operation not permitted`); it
 also could not update its cache under `/home/agent/.local/state/comma` because
@@ -21,6 +30,10 @@ that path is read-only. No Scaleway API request or yt-dlp validation from a
 Scaleway IP was possible. The command selection below remains usable on a host
 where comma can resolve the CLI.
 `frontend/config.js` remains unchanged; Cloud Run remains the fallback.
+
+The retry attempt is complete, but deployment and remote validation remain
+blocked. The CLI fallback and retry are separate completed tasks in
+[TASKS.md](../../TASKS.md); neither establishes that Scaleway deployment succeeded.
 
 ## Container assumptions
 
