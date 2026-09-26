@@ -58,8 +58,9 @@ not cached. Rollback: set the DNS record back to "DNS only".
 
 ## Result (2026-09-26)
 
-Steps 1–4 are done on atom, and step 5 is done except for the loading page
-(see "Cold start" below). The app runs at https://dallape.vempai.men/.
+Steps 1–5 are done: 1–4 on atom, and the loading page in step 5 was
+checked by hand (see "Cold start" below). The app runs at
+https://dallape.vempai.men/.
 
 Credentials: the existing Scaleway CLI profile `drum-transcribe` on atom
 (`~/.config/scw/config.yaml`). Its user API key targets the account's only
@@ -137,14 +138,13 @@ minutes). Idle gaps of 8 and 13 minutes were not enough for Scaleway to
 scale the container to zero. drum-transcribe's logs suggest a new instance
 after about 15–20 idle minutes.
 
-Not yet verified: a real cold start through the loading page. Bot requests
-kept arriving at intervals of 2–10 minutes until at least 16:07 UTC, so the
-instance never idled long enough. To measure, wait until Cockpit shows no
-requests for 20 minutes (query `{resource_id="<container id>"}`), then load
-the page in a browser. Expect either the "Starting up…" page followed by a
-reload into the app, or, if Scaleway starts this small image in under 2.5 s,
-the app directly. A new `resource_instance` name in the logs confirms that
-the start was cold.
+Bot requests kept arriving at intervals of 2–10 minutes until at least
+16:07 UTC, so an automated 20-minutes-idle check never fired. Antti then
+tested a cold start by hand in a browser the same day: the "Starting up…"
+page appeared and reloaded into the working app. Cold-start timings were
+not measured. To measure them, wait until Cockpit shows no requests for
+20 minutes (query `{resource_id="<container id>"}`), then load the page. A
+new `resource_instance` name in the logs confirms that the start was cold.
 
 ## Earlier attempts
 
