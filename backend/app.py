@@ -113,6 +113,12 @@ def video_info(url: str) -> dict:
         raise HTTPException(502, str(e)) from e
 
 
+@app.get("/api/health")
+def health():
+    """Cheap, side-effect-free probe; the Cloudflare loading page polls it."""
+    return {"ok": True}
+
+
 @app.get("/api/formats")
 def formats(url: str):
     info = video_info(url)
@@ -138,5 +144,5 @@ def audio(url: str, format: str):
 
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
-if FRONTEND.is_dir():  # local development only; the container image has no frontend
+if FRONTEND.is_dir():  # the container image copies it to /app/frontend
     app.mount("/", StaticFiles(directory=FRONTEND, html=True), name="frontend")

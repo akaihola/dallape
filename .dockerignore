@@ -1,0 +1,6 @@
+*
+!backend/pyproject.toml
+!backend/uv.lock
+!backend/app.py
+!frontend/
+frontend/tests/
