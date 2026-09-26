@@ -10,8 +10,8 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In progress
 
-- [1] Deploy and validate the backend on Scaleway Serverless Containers before
-  switching the frontend. Keep Cloud Run as the fallback.
+- [1] Deploy and validate the app on a Scaleway Serverless Container behind a
+  Cloudflare loading Worker, following drum-transcribe.
 
 ## Completed
 

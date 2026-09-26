@@ -6,10 +6,55 @@ title: Validate Scaleway Serverless Containers deployment
 
 ## Goal and acceptance criteria
 
-Deploy the backend to Scaleway Serverless Containers, which charges no egress, as
-a cheaper alternative to Cloud Run. Validate yt-dlp against YouTube from Scaleway IPs,
-response streaming and cold start before pointing `frontend/config.js` at it. Keep
-Cloud Run as the fallback.
+Deploy the whole app (frontend and API from one container) to Scaleway
+Serverless Containers, which charges no egress, behind a Cloudflare loading
+Worker, following drum-transcribe's `plokkaus.vempai.men` setup. Audio is
+streamed through, never stored, so nothing is lost when the container scales
+to zero. Validate yt-dlp against YouTube from Scaleway IPs, full audio
+streaming through the Cloudflare proxy and the cold-start loading page.
+
+## Plan (2026-09-26)
+
+In the repository (done):
+
+- `deploy/Dockerfile` builds from the repository root and copies
+  `frontend/` next to the backend, so the container serves the page and
+  `/api/*` on one origin; `frontend/config.js` stays empty.
+- `GET /api/health` is a cheap, side-effect-free probe for the loading page.
+- `deploy/cloudflare/worker.js` and `wrangler.toml` (Worker
+  `dallape-front`, route `dallape.vempai.men/*`) show a "Starting up…" page
+  for page loads not answered within 2.5 s, the same code as
+  drum-transcribe's `plokkaus-front` except the probe URL and styles.
+
+On a host with Scaleway and Cloudflare credentials (atom, like
+drum-transcribe), not yet done:
+
+1. Scaleway (region `fr-par`): create a registry namespace `dallape`, a
+   containers namespace `dallape` and a container `app` with the settings
+   listed under "Container assumptions" below, except that
+   `ALLOWED_ORIGINS` is no longer needed for the frontend. Build and push:
+   `podman build -f deploy/Dockerfile -t rg.fr-par.scw.cloud/dallape/app:latest .`
+   then `podman push …` and deploy. Check `/`, `/api/health` and one
+   `/api/formats` + full `/api/audio` on the container's own
+   `*.functions.fnc.fr-par.scw.cloud` URL.
+2. Add `dallape.vempai.men` as a custom domain on the container, then
+   create a CNAME `dallape` in the `vempai.men` zone pointing at the
+   container endpoint, first "DNS only" so Scaleway can issue its
+   certificate, then "Proxied" (zone SSL mode is already "Full").
+3. `cd deploy/cloudflare && npx wrangler@4 deploy` with a token that can
+   edit Workers and DNS for `vempai.men` (drum-transcribe's
+   `.secrets.cloudflare.env` on atom already has one).
+4. Via the Cloudflare API, create the no-Worker route
+   `POST /zones/<zone>/workers/routes` `{"pattern": "dallape.vempai.men/api/*"}`
+   and set `request_limit_fail_open: true` on the main route.
+5. Verify in a browser: a cold start shows the loading page and reloads into
+   the app; formats load; a long track streams completely and plays.
+
+Cloudflare limits to keep in mind: an origin must send its first byte within
+100 s (error 524), which a streamed `/api/audio` does after one extraction;
+and Cloudflare caches `.js`/`.css` by default, so purge the cache (or wait)
+after deploying frontend changes. `/api/audio` has no file extension and is
+not cached. Rollback: set the DNS record back to "DNS only".
 
 ## Result
 
@@ -37,7 +82,7 @@ blocked. The CLI fallback and retry are separate completed tasks in
 
 ## Container assumptions
 
-The existing `backend/Dockerfile` is compatible with a serverless container:
+The container (`deploy/Dockerfile`, formerly `backend/Dockerfile`) is compatible with a serverless container:
 it listens on `0.0.0.0`, reads `PORT` with an 8080 fallback, has no persistent
 state, and streams `/api/audio` through FastAPI `StreamingResponse`. The image
 needs a registry push before deployment. Provider settings to validate when
@@ -101,10 +146,8 @@ The provider assumptions above come from Scaleway's [deployment guide],
 
 ## Follow-up
 
-With Scaleway access, build and push `backend/`, deploy the image using the
-settings above, run the three remote checks, and compare cold start, streaming,
-and yt-dlp success with the existing Cloud Run service. Only then set
-`window.DALLAPE_API_BASE` in `frontend/config.js` to the Scaleway URL.
+Superseded by the 2026-09-26 plan above: run its steps 1–5 on a host with
+Scaleway and Cloudflare credentials. No `frontend/config.js` change is needed.
 
 [deployment guide]: https://www.scaleway.com/en/docs/serverless-containers/api-cli/deploy-container-cli/
 [port documentation]: https://www.scaleway.com/en/docs/serverless-containers/reference-content/port-parameter-variable/

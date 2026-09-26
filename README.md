@@ -64,8 +64,7 @@ frontend and backend as a Markdown table:
 | cache audio track content                    |                                 |
 | query backend for audio download pregress    | provide audio download progress |
 
-This design allows hosting the static frontend on a CDN and scaling the backend
-to zero when not in use.
+This design lets the backend scale to zero when not in use.
 
 ### The API
 
@@ -80,56 +79,53 @@ It is also exposed as a public API that can be used by other applications.
 cd backend
 uv run pytest                      # backend unit tests
 uv run uvicorn app:app --reload    # serves the API and ../frontend on http://localhost:8000/
-node --test frontend/tests/        # frontend unit tests (from the repository root)
+node --test frontend/tests/*.test.js  # frontend unit tests (from the repository root)
 ```
 
-### Backend on Google Cloud Run
+### Production: Scaleway Serverless Container behind Cloudflare
 
-The backend keeps no state between requests, so it can scale to zero. Deploy
-it straight from `backend/` (the Dockerfile is used because one is present):
+Same model as drum-transcribe's `plokkaus.vempai.men`:
+
+- One container, built from `deploy/Dockerfile` at the repository root,
+  serves both `frontend/` and `/api/*` on the same origin, so no CORS or
+  `frontend/config.js` change is needed. It keeps no state and scales to
+  zero; audio is only streamed through, never stored.
+- `dallape.vempai.men` is a **proxied** CNAME in the Cloudflare `vempai.men`
+  zone pointing at the container endpoint.
+- The Worker in `deploy/cloudflare/` answers page loads that the container
+  doesn't answer within 2.5 s with a "Starting up…" page, which polls
+  `/api/health` and reloads itself once the app is up.
+- A second route, `dallape.vempai.men/api/*`, has no Worker, so API calls
+  and audio streams go through Cloudflare's plain proxy straight to
+  Scaleway and don't count against the Worker's free-plan quota.
+
+Build and deploy (the container needs a request timeout of 900 s for long
+audio streams):
 
 ```sh
-gcloud run deploy dallape-api --source backend --region <region> \
-  --min-instances 0 --timeout 900 --allow-unauthenticated \
-  --set-env-vars ALLOWED_ORIGINS=https://dallape.vempai.men
+podman build -f deploy/Dockerfile -t rg.fr-par.scw.cloud/dallape/app:latest .
+podman push rg.fr-par.scw.cloud/dallape/app:latest
+, scw container container redeploy <container-id>
+cd deploy/cloudflare && npx wrangler@4 deploy   # only after editing the Worker
 ```
 
+One-time setup and the checks that remain are in
+[docs/tasks/1-scaleway-deployment.md][deployment task].
+**Off switch for the Worker:** set the `dallape` DNS record back to "DNS
+only".
+
 Optional environment variables: `ALLOWED_ORIGINS` (comma-separated CORS
-origins, default `*`) and `YTDLP_COOKIEFILE` (path to a Netscape cookie file
-mounted into the container, for videos YouTube refuses to serve to anonymous
-datacenter clients).
+origins for third-party API users, default `*`) and `YTDLP_COOKIEFILE`
+(path to a Netscape cookie file, for videos YouTube refuses to serve to
+anonymous datacenter clients). Never bake cookie files or other credentials
+into the image.
 
 yt-dlp breaks whenever YouTube changes; run `uv lock --upgrade-package yt-dlp`
 in `backend/` and redeploy to pick up fixes.
 
-### Backend on Fly.io or a VPS
-
-Build the image from `backend/` and publish it to a registry, then expose the
-container's port 8080. Fly.io sets `PORT` to the service port; the image uses
-that value and falls back to 8080. A VPS can run the same image with
-`-p 8080:8080` (or map another host port):
-
-```sh
-cd backend
-docker build -t dallape-backend .
-docker run --rm -p 8080:8080 \
-  -e ALLOWED_ORIGINS=https://dallape.vempai.men \
-  dallape-backend
-```
-
-Set `ALLOWED_ORIGINS` and, when needed, `YTDLP_COOKIEFILE` through the
-provider's secret or environment configuration. Do not bake cookie files or
-other credentials into the image. The backend is stateless; persistent
-volumes are unnecessary.
-
-### Frontend on a CDN
-
-`frontend/` is plain static files with no build step. Set the Cloud Run
-service URL in `frontend/config.js` and upload the directory to any static
-host (a Cloud Storage bucket behind Cloud CDN, Cloudflare Pages, Firebase
-Hosting, …). The frontend contacts the backend only to list the formats of a
-video (once, on the first format click) and to fetch each audio track (once).
-Download progress is derived from the streamed bytes, so no polling is needed.
+The same image runs on any container host (Cloud Run, Fly.io, a VPS) that
+sets `PORT` or maps port 8080.
 
 [dallape.vempai.men]: https://dallape.vempai.men
 [yt-dlp]: https://github.com/yt-dlp/yt-dlp
+[deployment task]: docs/tasks/1-scaleway-deployment.md

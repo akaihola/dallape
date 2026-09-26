@@ -62,6 +62,11 @@ def test_download_filename_encodes_title_and_includes_bitrate():
     assert backend.download_filename(INFO, INFO["formats"][2]) == "Never%20%2F%20Gonna%20160%20kbps.webm"
 
 
+def test_health():
+    r = client.get("/api/health")
+    assert r.status_code == 200 and r.json() == {"ok": True}
+
+
 def test_formats_endpoint(canned):
     r = client.get("/api/formats", params={"url": f"https://youtu.be/{VIDEO_ID}"})
     assert r.status_code == 200
