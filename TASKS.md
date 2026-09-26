@@ -6,6 +6,11 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
+- [*] Scanners found the hostname within two minutes of the certificate being issued,
+  and each probe wakes the container. That costs little, but it means fewer true cold
+  starts. Let's block the obvious probe paths (`/.env*`, `/.git/*`) with a Cloudflare
+  WAF rule.
+
 ## Scheduled
 
 ## In progress
