@@ -98,6 +98,9 @@ Same model as drum-transcribe's `plokkaus.vempai.men`:
 - A second route, `dallape.vempai.men/api/*`, has no Worker, so API calls
   and audio streams go through Cloudflare's plain proxy straight to
   Scaleway and don't count against the Worker's free-plan quota.
+- The [scanner WAF rule](docs/tasks/1-scaleway-deployment.md#block-scanner-probes-with-cloudflare-waf)
+  defines hostname-scoped blocking for `/.env*` and `/.git/*`; deployment
+  and verification steps are documented there.
 
 Build and deploy (the container needs a request timeout of 900 s for long
 audio streams):
