@@ -27,7 +27,7 @@ In the repository (done):
   drum-transcribe's `plokkaus-front` except the probe URL and styles.
 
 On a host with Scaleway and Cloudflare credentials (atom, like
-drum-transcribe), not yet done:
+drum-transcribe), done 2026-09-26 (see "Result (2026-09-26)"):
 
 1. Scaleway (region `fr-par`): create a registry namespace `dallape`, a
    containers namespace `dallape` and a container `app` with the settings
@@ -56,7 +56,97 @@ and Cloudflare caches `.js`/`.css` by default, so purge the cache (or wait)
 after deploying frontend changes. `/api/audio` has no file extension and is
 not cached. Rollback: set the DNS record back to "DNS only".
 
-## Result
+## Result (2026-09-26)
+
+Steps 1–4 are done on atom, and step 5 is done except for the loading page
+(see "Cold start" below). The app runs at https://dallape.vempai.men/.
+
+Credentials: the existing Scaleway CLI profile `drum-transcribe` on atom
+(`~/.config/scw/config.yaml`). Its user API key targets the account's only
+project, which is named `dallape`, and drum-transcribe's resources live in the
+same project. No new project or API key was created. Cloudflare: the token in
+drum-transcribe's `.secrets.cloudflare.env` on atom.
+
+### Resources
+
+Scaleway, region `fr-par`, project `dallape`
+(`3bb36115-95a5-4ccf-9436-d39ab212fe62`):
+
+| Resource | Name | ID |
+|---|---|---|
+| Registry namespace | `dallape` (private, `rg.fr-par.scw.cloud/dallape`) | `cb2eb80b-43db-4c86-bf2c-4d40fbec1f57` |
+| Containers namespace | `dallape` | `cdc246d5-e759-46a2-88ed-a4e6014665b4` |
+| Container | `app` | `3e5fe326-ad5a-4389-b8b8-e7fc9fccc7a1` |
+| Custom domain | `dallape.vempai.men` | `454bbc45-b05e-4bd2-a96e-ae06d4ed22e4` |
+
+Container settings: image `rg.fr-par.scw.cloud/dallape/app:latest`, public,
+HTTP/1, port 8080, sandbox v2, 1 GB RAM (`memory-limit-bytes=1GB`; the CLI
+refuses plain byte counts), 560 mvCPU, `min-scale=0`, `max-scale=2`,
+`scaling-option.concurrent-requests-threshold=20`, timeout 900 s. No
+environment variables: `ALLOWED_ORIGINS` keeps its default `*`, because the
+frontend is same-origin. Container URL:
+https://dallapecdc246d5-app.functions.fnc.fr-par.scw.cloud
+
+Cloudflare, zone `vempai.men` (`3fa2d208da5e2dfccce10a401b4036fa`):
+
+| Resource | Details | ID |
+|---|---|---|
+| DNS record | CNAME `dallape` → `dallapecdc246d5-app.functions.fnc.fr-par.scw.cloud`, proxied, TTL 300 | `511874a27742fc3cb559fa849812ae03` |
+| Worker | `dallape-front`, first version `d39480dd-3b36-4b39-b542-e254f0977513` | — |
+| Route | `dallape.vempai.men/*` → `dallape-front`, `request_limit_fail_open: true` | `bc65668c41f04760bfeffdfc7e821da6` |
+| Route | `dallape.vempai.men/api/*` → no Worker | `4e9caeaff4ec408fb7a166a1ed9bcb1d` |
+
+Order used: the CNAME was created as "DNS only". The Scaleway domain then
+became `ready` within about 10 s, and its certificate verified over plain
+DNS. Only after that was the record switched to "Proxied".
+
+### Checks
+
+Test videos: "Me at the zoo" (`jNQXAC9IVRw`, 19 s), Big Buck Bunny
+(`aqz-KE-bpKQ`, 10:35) and "Muti Conducts Beethoven 9" (`rOjHhS5MtvA`,
+1:21:23).
+
+- yt-dlp works from Scaleway's IPs without cookies. Every `/api/formats` call
+  succeeded, and no bot check was hit.
+- On the container URL: `/` 200 in 0.2 s, `/api/health` 200 in 0.14 s,
+  `/api/formats` 1.8–3.2 s. Full `/api/audio` of Big Buck Bunny, formats 251
+  and 140: 10 202 210 and 10 271 496 bytes, exactly the formats' `filesize`.
+  First byte after 2.1 s, total 3.6 s, correct `Content-Type`,
+  `Content-Length` and `Content-Disposition` (with `N kbps`).
+- Through Cloudflare (`dallape.vempai.men`): `/api/formats` 1.6–1.8 s. The Big
+  Buck Bunny 251 stream is byte-identical to the direct download
+  (`cf-cache-status: DYNAMIC`). The 81-minute Beethoven track, format 251,
+  streamed all 81 817 121 bytes with first byte after 1.9 s and total 14.8 s.
+- Browser (headless Chromium via Playwright, on atom): the page loads, and
+  picking "Opus 160 kbps" on the Beethoven video downloads the full 78.0 MB
+  track in 13–16 s. After `playVideo` on the YouTube player, the `<audio>`
+  element plays the Dallapé track (duration 4882.5 s). After a seek to
+  1:20:50 it keeps advancing in step with real time.
+- Pinchtab's browser was unusable for the playback check: its tab reports
+  `visibilityState: hidden`, so Chrome never loads media or the YouTube
+  player there.
+
+### Cold start
+
+After a 30-minute pause on our side the first page load still took 1.5 s
+and got the app directly. The Cockpit logs show why: the first instance
+(`…-00001-deployment-…-9svlm`, started 15:01:59 UTC) was still running,
+because bots started scanning the new hostname within two minutes of its
+certificate being issued (`/.env`, `/.git/HEAD`, `GET /` every few
+minutes). Idle gaps of 8 and 13 minutes were not enough for Scaleway to
+scale the container to zero. drum-transcribe's logs suggest a new instance
+after about 15–20 idle minutes.
+
+Not yet verified: a real cold start through the loading page. Bot requests
+kept arriving at intervals of 2–10 minutes until at least 16:07 UTC, so the
+instance never idled long enough. To measure, wait until Cockpit shows no
+requests for 20 minutes (query `{resource_id="<container id>"}`), then load
+the page in a browser. Expect either the "Starting up…" page followed by a
+reload into the app, or, if Scaleway starts this small image in under 2.5 s,
+the app directly. A new `resource_instance` name in the logs confirms that
+the start was cold.
+
+## Earlier attempts
 
 The earlier attempt was blocked at provider deployment: the documented
 Scaleway secret file exists and the image builds, but it provides only an access
@@ -146,8 +236,8 @@ The provider assumptions above come from Scaleway's [deployment guide],
 
 ## Follow-up
 
-Superseded by the 2026-09-26 plan above: run its steps 1–5 on a host with
-Scaleway and Cloudflare credentials. No `frontend/config.js` change is needed.
+Done on 2026-09-26; see "Result (2026-09-26)" above. No `frontend/config.js`
+change was needed.
 
 [deployment guide]: https://www.scaleway.com/en/docs/serverless-containers/api-cli/deploy-container-cli/
 [port documentation]: https://www.scaleway.com/en/docs/serverless-containers/reference-content/port-parameter-variable/

@@ -105,11 +105,14 @@ audio streams):
 ```sh
 podman build -f deploy/Dockerfile -t rg.fr-par.scw.cloud/dallape/app:latest .
 podman push rg.fr-par.scw.cloud/dallape/app:latest
-, scw container container redeploy <container-id>
+, scw container container redeploy 3e5fe326-ad5a-4389-b8b8-e7fc9fccc7a1 --profile drum-transcribe
 cd deploy/cloudflare && npx wrangler@4 deploy   # only after editing the Worker
 ```
 
-One-time setup and the checks that remain are in
+On atom, `podman` is logged in to the registry, and `wrangler` needs the
+Cloudflare token from drum-transcribe's `.secrets.cloudflare.env`
+(`set -a && . …/.secrets.cloudflare.env && set +a`). Resource IDs, the
+one-time setup and measured timings are in
 [docs/tasks/1-scaleway-deployment.md][deployment task].
 **Off switch for the Worker:** set the `dallape` DNS record back to "DNS
 only".

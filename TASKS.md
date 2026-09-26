@@ -10,11 +10,10 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In progress
 
-- [1] Deploy and validate the app on a Scaleway Serverless Container behind a
-  Cloudflare loading Worker, following drum-transcribe.
-
 ## Completed
 
+- [1] Deploy and validate the app on a Scaleway Serverless Container behind a
+  Cloudflare loading Worker, following drum-transcribe.
 - [*] Retry what task 5f5f0c2e-1492-41fc-bc30-4d7209808ebf tried, but now with `, scw`.
 - [*] If on a NixOS host with no `scw` installed but `comma` available, always use
   `, scw` instead of just `scw`.
