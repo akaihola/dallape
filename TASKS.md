@@ -16,16 +16,16 @@ Rules for TASKS.md usage are at the bottom of the file.
   starts. Let's block the obvious probe paths (`/.env*`, `/.git/*`) with a Cloudflare
   WAF rule.
 
-## Completed
+## Completed / Accepted
 
-- [1] Deploy and validate the app on a Scaleway Serverless Container behind a
+- [ ] [1] Deploy and validate the app on a Scaleway Serverless Container behind a
   Cloudflare loading Worker, following drum-transcribe.
-- [*] Retry what task 5f5f0c2e-1492-41fc-bc30-4d7209808ebf tried, but now with `, scw`.
-- [*] If on a NixOS host with no `scw` installed but `comma` available, always use
+- [ ] [*] Retry what task 5f5f0c2e-1492-41fc-bc30-4d7209808ebf tried, but now with `, scw`.
+- [ ] [*] If on a NixOS host with no `scw` installed but `comma` available, always use
   `, scw` instead of just `scw`.
-- [*] Create a `Dockerfile` for running the backend on Google Cloud Run, Fly.io, or an
+- [ ] [*] Create a `Dockerfile` for running the backend on Google Cloud Run, Fly.io, or an
   always-on VPS. Build and test it.
-- [*] Include `N kbps` in the downloaded file names.
+- [ ] [*] Include `N kbps` in the downloaded file names.
 
 [*]: TASKS.md
 [1]: docs/tasks/1-scaleway-deployment.md
@@ -50,10 +50,18 @@ same time.
 
 ### TASKS.md maintenance sessions
 
-- Each issue bullet in every section must be prefixed with either
+- In `## Completed / Accepted`, `- [ ] [N] summary` or `- [ ] [*] summary`
+  means completed work awaiting user acceptance. `- [x] [N] summary` or
+  `- [x] [*] summary` means the user has accepted it. Only user acceptance
+  changes `[ ]` to `[x]`; completion, tests and deployment do not.
+- Move newly completed issues into `## Completed / Accepted` with `[ ]`.
+- During the next maintenance run, remove only `[x]` issues from this section,
+  plus their unused description files and reference-style links. Keep `[ ]`
+  issues and any files or links still referenced by another issue.
+- Each issue in every section must retain either
     - a numbered reference-style link (e.g. `[1]`) to a description file, or
     - `[*]` to indicate no description file is needed for a simple task.
-- Link references are listed between `## Completed` and `## Rules`.
+- Link references are listed between `## Completed / Accepted` and `## Rules`.
 - If any issue is missing a link:
     - Create the first missing numbered description file in
       docs/tasks/<N-issue-description>.md and add the link
@@ -65,9 +73,9 @@ same time.
     - indented `- Depends on: [N]` bullets in TASKS.md, and
     - YAML frontmatter in description files.
 - Ensure backlog order respects dependencies.
-- When you move an issue to a different section, move its lines without a change. Keep
-  the prefix, the bullet text and the line wrapping the same. Git can then see the move,
-  and concurrent moves do not cause a conflict.
+- When you move an issue, preserve its identifier, text and line wrapping.
+  Change only the status checkbox when completion or user acceptance requires it.
+  This keeps moves identifiable in Git and reduces avoidable conflicts.
 
 ### Workflow for new issue completion
 
@@ -93,7 +101,8 @@ same time.
 3. Merge and deploy (typically by last steps of a task workflow)
 
 - Merge the rebased branch on `main`, and remove the worktree and branch.
-- Move the issue from `## In progress` to `## Completed` in TASKS.md and commit.
+- Move the issue from `## In progress` to `## Completed / Accepted` in TASKS.md with `[ ]`,
+  pending user acceptance, and commit.
 - Do any deployment steps if defined in the general development worklow.
 
 When TASKS.md conflicts during a rebase or merge:
