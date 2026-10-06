@@ -9,7 +9,7 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Scheduled
 
-## In progress
+## In Progress
 
 - [*] Scanners found the hostname within two minutes of the certificate being issued,
   and each probe wakes the container. That costs little, but it means fewer true cold
@@ -39,7 +39,7 @@ Here are the rules for TASKS.md usage:
 ### Invariant: one heading per issue
 
 At any time, each issue's bullet must be under exactly one `##` heading (for example
-`## Ordered backlog` or `## In progress`). It must never be under two headings at the
+`## Ordered backlog` or `## In Progress`). It must never be under two headings at the
 same time.
 
 - Before you commit any change to TASKS.md, run:
@@ -89,7 +89,7 @@ same time.
 
 - Rebase the worktree feature branch on `main` before moving the issue, and keep it
   rebased afterwards.
-- Move the issue under `## In progress` in `TASKS.md` in the worktree branch, ensure
+- Move the issue under `## In Progress` in `TASKS.md` in the worktree branch, ensure
   it's not in `## Ordered backlog`, and commit.
 - Create or update, review and refine a plan in docs/tasks/<N-issue-description>.md in
   `main` if more description is needed than nicely fits in a bullet point. If you
@@ -101,7 +101,7 @@ same time.
 3. Merge and deploy (typically by last steps of a task workflow)
 
 - Merge the rebased branch on `main`, and remove the worktree and branch.
-- Move the issue from `## In progress` to `## Completed / Accepted` in TASKS.md with `[ ]`,
+- Move the issue from `## In Progress` to `## Completed / Accepted` in TASKS.md with `[ ]`,
   pending user acceptance, and commit.
 - Do any deployment steps if defined in the general development worklow.
 
