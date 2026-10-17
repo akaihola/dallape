@@ -6,6 +6,8 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
+- [2] Gather acceptance evidence for the 5 legacy review-queue items
+  <!-- hai:{"id":"simple-365744dc-1e09-4c8c-a42e-0f545e074764","labels":["steward"],"createdAt":"2026-10-17T20:09:29.021Z","updatedAt":"2026-10-17T20:09:29.021Z"} -->
 
 ## Scheduled
 
@@ -31,6 +33,10 @@ Rules for TASKS.md usage are at the bottom of the file.
 [1]: docs/tasks/1-scaleway-deployment.md
 
 ---
+
+[2]: docs/tasks/2-gather-acceptance-evidence-for-the-5-legacy-review-queue-items.md
+
+<!-- hai:reserved-numbers:1,2 -->
 
 ## Rules
 
