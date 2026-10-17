@@ -10,15 +10,15 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In Progress
 
-- [~] [2] Gather acceptance evidence for the 5 legacy review-queue items
-      <!-- hai:{"id":"simple-365744dc-1e09-4c8c-a42e-0f545e074764","labels":["steward"],"createdAt":"2026-10-17T20:09:29.021Z","updatedAt":"2026-10-17T20:14:34.490Z"} -->
-
 - [*] Scanners found the hostname within two minutes of the certificate being issued,
   and each probe wakes the container. That costs little, but it means fewer true cold
   starts. Let's block the obvious probe paths (`/.env*`, `/.git/*`) with a Cloudflare
   WAF rule.
 
 ## Completed / Accepted
+
+- [ ] [2] Gather acceptance evidence for the 5 legacy review-queue items
+      <!-- hai:{"id":"simple-365744dc-1e09-4c8c-a42e-0f545e074764","labels":["steward"],"createdAt":"2026-10-17T20:09:29.021Z","updatedAt":"2026-10-17T20:16:19.405Z"} -->
 
 - [ ] [1] Deploy and validate the app on a Scaleway Serverless Container behind a
   Cloudflare loading Worker, following drum-transcribe.
