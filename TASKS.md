@@ -24,12 +24,12 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
+## Scheduled
+
 - [10] Use backend format metadata for playback and downloads
     - Depends on: [5]
 
-  <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-19T14:10:08.053Z"} -->
-
-## Scheduled
+  <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-19T14:35:24.274Z"} -->
 
 ## In Progress
 
