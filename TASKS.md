@@ -24,17 +24,17 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
-- [5] Activate replacement audio only when it can play
-    - Depends on: [4]
-
-  <!-- hai:{"id":"simple-07d103ef-891b-4179-8e54-1b81a6cb7c3d","labels":["steward"],"createdAt":"2026-10-19T11:15:25.075Z","updatedAt":"2026-10-19T14:10:07.506Z"} -->
-
 - [10] Use backend format metadata for playback and downloads
     - Depends on: [5]
 
   <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-19T14:10:08.053Z"} -->
 
 ## Scheduled
+
+- [5] Activate replacement audio only when it can play
+    - Depends on: [4]
+
+  <!-- hai:{"id":"simple-07d103ef-891b-4179-8e54-1b81a6cb7c3d","labels":["steward"],"createdAt":"2026-10-19T11:15:25.075Z","updatedAt":"2026-10-19T14:26:53.129Z"} -->
 
 ## In Progress
 
