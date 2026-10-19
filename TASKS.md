@@ -24,9 +24,6 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
-- [4] Fix audio request ownership and retry recovery
-  <!-- hai:{"id":"simple-b2093cf7-c9ea-4453-80cb-a8ecd7453b3f","labels":["steward"],"createdAt":"2026-10-19T11:15:24.739Z","updatedAt":"2026-10-19T14:10:07.185Z"} -->
-
 - [6] Validate audio stream bytes and failure recovery
     - Depends on: [4]
 
@@ -43,6 +40,9 @@ Rules for TASKS.md usage are at the bottom of the file.
   <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-19T14:10:08.053Z"} -->
 
 ## Scheduled
+
+- [4] Fix audio request ownership and retry recovery
+  <!-- hai:{"id":"simple-b2093cf7-c9ea-4453-80cb-a8ecd7453b3f","labels":["steward"],"createdAt":"2026-10-19T11:15:24.739Z","updatedAt":"2026-10-19T14:15:16.276Z"} -->
 
 ## In Progress
 
