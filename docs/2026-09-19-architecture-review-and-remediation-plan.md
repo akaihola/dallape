@@ -245,3 +245,248 @@ Not completed:
 -   Earlier tracker maintenance was not altered. Review is a snapshot of this commit; later concurrent changes require rechecking the affected evidence.
 
 Recommended first work: fix retry/current-video ownership, then make activation wait for playable audio. Validate stream bytes next. Gate the already-planned provider migration on a YouTube-capable image, safe cookie handling, explicit resource limits and the expanded end-to-end checks.
+
+## Status, 2026-10-19
+
+Checked against local `main` at `5eb6c1b`, after the HAI-3 start move. This
+section supplements the original review; the findings and historical verification
+record above remain unchanged. Verdicts describe implementation and recorded
+evidence, not user acceptance or a fresh production check.
+
+The original application failures remain. Five remediation steps are still open;
+steps 4, 5 and 8 are partly done. No whole finding or remediation step is done or
+obsolete. The old separate-CDN/backend deployment instructions are obsolete for
+the deployed same-origin topology, but that does not retire the reliability work.
+
+### Evidence and scope
+
+- Compared `cc5b161`, the commit adding this review, with current `main`, and read
+  the changed application/build files and deployment records. `frontend/app.js`,
+  `frontend/providers.js`, `frontend/tests/providers.test.js`,
+  `backend/pyproject.toml` and `backend/uv.lock` are byte-identical. All ten
+  original backend function bodies are AST-identical, including `read_chunks`,
+  `ydl_opts`, `video_info` and both media endpoints.
+- `11da77e`, merged by `ed21b80`, adds same-origin frontend serving in the image,
+  `/api/health` and its test, the loading Worker and its configuration. The
+  extractor, stream integrity, cookies and frontend lifecycle were not repaired.
+- `db6feca` records the 2026-09-26 Scaleway deployment in
+  `docs/tasks/1-scaleway-deployment.md`. It records complete direct downloads,
+  a byte-identical proxied download, an 81-minute stream and Chromium playback
+  with a late seek. A real scale-to-zero/loading-page check remains explicitly
+  unverified. These are historical results, not checks repeated on 2026-10-19.
+- `546d85a` records 23 backend and three frontend tests passing, an image build
+  and offline custom-PORT smoke checks on 2026-10-17 in
+  `docs/tasks/2-gather-acceptance-evidence-for-the-5-legacy-review-queue-items.md`.
+  Those results supersede the old environment's inability to run the suites or
+  build an image; they do not cover the failure cases missing from those suites.
+- `d10316e`, merged by `7aaa6b5`, defines the scanner WAF rule in the deployment
+  document. Its live deployment is explicitly pending and already has its own
+  tracker issue. It is not an application capacity limit.
+- This audit used source/history comparison and tracker validation. No media,
+  backend or browser tests were needed for these verdicts, and none were run.
+  No image was built, live service accessed, credentials read or deployment
+  changed. The original external protocol/dependency claims were not re-audited;
+  unchanged code/locks and the later checked-in evidence establish these verdicts.
+
+### Findings F1–F9
+
+1. **F1, still open.** `frontend/app.js:122-172` still marks `activeFormat` and
+   mutes before attachment/readiness, has no completion attachment for an
+   unsupported-MSE incomplete track, swallows `play()` rejection and omits rate
+   and volume synchronization. The successful Chromium path recorded in
+   `db6feca` does not exercise unsupported MSE, decode failure or interruption.
+   Proposals [HAI-4] and [HAI-5].
+2. **F2, still open.** `frontend/app.js:17-43,75-89` retains a rejected
+   `v.loading`, lacks a post-await selection check and can use a player before
+   its first readiness event. No later lifecycle tests were added. [HAI-4].
+3. **F3, still open.** `backend/app.py:77-94,133-143` still advances ranges by
+   requested offsets without validating response status, Content-Range or byte
+   count. `frontend/app.js:95-120` still treats reader EOF as completion and
+   replaces expected length with received length. The ideal-range fixture and
+   historically exact downloads prove happy paths only. [HAI-6].
+4. **F4, partly done.** `11da77e` supplies the current frozen image recipe at
+   `deploy/Dockerfile:3-10`; `db6feca` records successful anonymous extraction and
+   full transfers from Scaleway. `546d85a` records an image ID and custom-PORT
+   smoke check. However, the unchanged manifest/lock and `ydl_opts` have no added
+   challenge runtime/EJS configuration or useful warning diagnostics. No CI,
+   pinned release digest/runtime inventory or challenge-path validation is
+   checked in. The broad possibility of packaging failure is no longer a reason
+   to call all Scaleway extraction blocked. Challenge-capable reproducibility
+   remains unproven. [HAI-7].
+5. **F5, partly done.** `db6feca` records max-scale 2, autoscaling concurrency
+   threshold 20, 1 GB RAM and a 900-second provider timeout. That supplies explicit
+   provider settings, not an application admission cap or extraction/stream
+   deadline. `backend/app.py:39-54,77-113,133-143` still has no media size/duration
+   policy, overload contract or explicit account-authority boundary; public 502
+   details still include raw extractor errors. The deployment records no cookie
+   environment variable and successful anonymous use, so account exposure is
+   conditional. [HAI-8].
+6. **F6, still open when cookie mode is enabled.** `ydl_opts` still passes the
+   same `YTDLP_COOKIEFILE` into context-managed extraction and streaming. No
+   isolated jar, immutable-input handling or cookie lifecycle tests were added.
+   The unchanged yt-dlp lock means the original pinned-source evidence still
+   applies. Anonymous deployment does not fix the advertised optional mode.
+   [HAI-8] requires a policy decision before retaining or enabling it.
+7. **F7, still open.** `frontend/app.js:7,39,95-113,140-163` still retains every
+   video/chunk/Blob, never revokes object URLs and has no abort or cache budget.
+   [HAI-9].
+8. **F8, still open.** `frontend/app.js:13,67-72,95-113,179-198` still retains
+   only format IDs and uses static metadata for columns, MIME and filenames.
+   `backend/tests/test_app.py:14-15` still supplies 129 kbps for ID 140 while the
+   client table says 128. No unknown-ID/variant fixtures were added. [HAI-10].
+9. **F9, partly done.** `11da77e` corrects the frontend-test glob, documents
+   same-origin deployment and adds a health test. `db6feca` adds live transfer
+   and browser evidence; `546d85a` adds complete suite/build/smoke results.
+   Remaining gaps include app.js lifecycle tests, HTTP fault framing, cookie
+   tests, CI and detailed API/failure documentation. README still mixes working
+   directories and a blocking server command in one block, promises all formats
+   and provider fallback, omits backend validation in its responsibility table,
+   and describes nonexistent progress requests. No tested browser capability
+   matrix or bounded-retention behavior is documented. [HAI-4]–[HAI-11], with
+   regression coverage owned by the fix it protects.
+
+### Ordered remediation steps
+
+1. **Request ownership and retry recovery, still open.** None of the specified
+   changes to `pick`, `loadFormats`, `showVideo`, `fetchTrack` or `stopAudio` has
+   landed; F1/F2 evidence above applies. Deferred metadata success/failure,
+   concurrent deduplication, stale-video errors/audio, rapid first-player
+   submissions and same-format retry checks are still absent. README has no
+   retry contract. The original no-migration/static-asset rollback remains
+   appropriate. File the whole remaining step as [HAI-4], with no prerequisite.
+2. **Switch only to usable audio, still open.** F1's attachment, buffered-range,
+   Blob fallback, error recovery, rate and mute/volume work is unchanged.
+   `db6feca` contributes one successful Chromium/Opus playback and seek record;
+   it does not satisfy the supported/unsupported-MSE, missing-length,
+   delayed-sourceopen, decode/append/play failure, pause/resume, unbuffered seek,
+   non-1x and switching matrix. Real AAC/Opus fixtures and a documented browser
+   matrix remain. Keep completed-Blob fallback and static rollback as planned.
+   [HAI-5] depends on [HAI-4].
+3. **Stream integrity and failure behavior, still open.** F3 remains unchanged.
+   No fault-injection matrix, real Uvicorn framing checks, verified-offset retry,
+   pre-header readiness or sanitized midstream-failure contract was added.
+   Historical full transfers are useful release evidence but do not validate
+   ignored/wrong/short ranges, 403/416, early/midstream failures, unknown sizes or
+   disconnect cleanup. Preserve endpoint/query compatibility and the original
+   independent backend rollback. [HAI-6] depends on [HAI-4]; it also owns the
+   original malformed-authority boundary check.
+4. **Reproducible YouTube-capable image, partly done.** The frozen clean image
+   recipe, exclusion of tests/credentials and real provider extraction/transfer
+   have evidence in `11da77e`, `db6feca` and `546d85a`. Custom-PORT startup was
+   checked historically; actual deployment supplies port-8080 evidence. The
+   latter local build is not recorded as a Python-3.12 clean-build/runtime
+   inventory. Remaining work is the chosen release's supported challenge setup,
+   sanitized warnings, immutable image digest/version inventory, startup/shutdown
+   verification and deterministic CI. True cold-start timings are missing; warm
+   timings are recorded in `db6feca`. Keep a matching image/lock rollback pair and
+   live provider extraction as a separate release gate. [HAI-7] has no application
+   prerequisite and must use a suitable build host, not hopeli.
+5. **Bound public service and safe cookies, partly done.** Provider instance,
+   memory, timeout and autoscaling settings are recorded, as F5 describes.
+   Admission before extraction, operation deadlines, size/duration/unknown-size
+   policy, disconnect cleanup, overload/CORS checks and measured capacity remain.
+   Cookie/account policy is undecided, and immutable-input jars, private
+   permissions, cleanup/concurrency tests and sanitized public failures remain
+   if cookie mode is retained. No real credentials belong in CI. Configuration
+   rollback and independent cookie disablement still need documenting. [HAI-8]
+   depends on [HAI-6] and [HAI-7], retaining the policy decision before cookie use.
+6. **Bound browser retention, still open.** F7's budgets, eviction/clearing,
+   aborts, callback/buffer teardown, object-URL revocation and redundant-chunk
+   release are all absent. There are no bounded-byte, refetch, active-URL or
+   success/error/abort ownership checks or browser memory observations. Keep
+   tab-only storage and independently reversible eviction policy; document
+   fetch-once as applying while retained. [HAI-9] depends on [HAI-4] and [HAI-5].
+7. **Actual format metadata, still open.** F8's authoritative merge, unknown-ID
+   rendering, accurate or estimated/unknown labels, shared metadata for MIME and
+   filenames, and unavailable-versus-unplayable distinction are all absent.
+   Changed-bitrate, missing-fields, empty-formats and captured language/variant
+   fixtures remain. The backend allowlist survives unchanged. Keep compatible
+   response keys and the original backend-first order if fields must be added.
+   [HAI-10] depends on [HAI-5].
+8. **Documentation and existing deployment gate, partly done.** `11da77e` fixes
+   the frontend test glob and deployment topology. `db6feca` records public
+   extraction, exact direct/proxied transfer, normal browser playback/seek and
+   warm latency; `546d85a` records full suites and build/custom-PORT smoke checks.
+   Still missing are separated runnable local instructions, declared tested Node
+   version, API parameters/fields/protocol/error/partial-stream contract,
+   lifecycle/cache/cookie/resource documentation and coverage from steps 1–7.
+   Image digest, actual scale-to-zero/loading-page behavior, playback during
+   transfer rather than only completed playback, cross-origin behavior and
+   measured bounded concurrency remain unverified. Preserve dated failed
+   attempts, fallback and deployment records in task [1]. A mandatory switch to
+   a separate API endpoint in `frontend/config.js` is obsolete because the
+   deployed image serves both sides on one origin; retain known fallback assets,
+   config and image before future service switches. [HAI-11] depends on
+   [HAI-4]–[HAI-10] and finishes the gate in existing task [1], not another
+   provider-migration project.
+
+### Original lower-priority observations
+
+- Malformed URL authorities, **still open**. `parse_youtube` still calls
+  `urlparse` outside error mapping. Include the 400/parity fixture in [HAI-6].
+- Input label and accessible selected/loading state, **still open**.
+  `frontend/index.html:16` and the visual-only active class are unchanged.
+  Include keyboard/screen-reader checks with [HAI-5]'s playback UI work.
+- iframe script/player errors, **still open**. `frontend/app.js:17-30` still has
+  no visible load/error recovery. Include these in [HAI-4]'s readiness tests.
+- Rendering frequency, **still open as a measurement question**, not a
+  demonstrated bottleneck. No profiling evidence or relevant code change was
+  added. Defer; no optimization proposal is justified for this tier-3 tool.
+- Mutable base image and shell startup, **still open**. The relocated
+  `deploy/Dockerfile:3,10` retains both. Historical startup success does not prove
+  shutdown/signal behavior. [HAI-7] owns digest tracking and that check.
+- Ephemeral yt-dlp state versus README's stateless claim, **still open**.
+  `ydl_opts` and documentation still omit the cache/cookie qualification. Cover
+  it in [HAI-8] and [HAI-11]; do not add durable storage.
+- Independent URL validation, **done before this review**, in backend commit
+  `8d5025d` and frontend commit `2cfb219`. Both trust boundaries remain. Shared regression
+  fixtures are still useful in [HAI-6]; a schema generator remains unjustified.
+- Tracker checker coverage/identity semantics, **still open as optional tooling
+  work**. `tools/check_tasks_md.py` is unchanged and has no tests. No actual
+  maintenance failure was found in this audit, so defer rather than file a
+  speculative checker rewrite. Its mandated check remains necessary.
+
+### Code added since the review
+
+Inspected the full application/build diff, particularly `backend/app.py`'s health
+probe/static mount, `deploy/Dockerfile`, `deploy/cloudflare/worker.js`,
+`deploy/cloudflare/wrangler.toml`, `.dockerignore` and `frontend/config.js`.
+Zero new over-engineering or shallow-module findings warrant proposals.
+
+The health endpoint gives the Worker a cheap probe without media extraction. The
+Worker keeps its wait policy, response construction and loading UI together behind
+one request handler; its small `loading` helper owns the HTTP response contract.
+The single image removes a deployment boundary for the frontend. None introduces
+speculative providers, lifecycle frameworks, queues or single-caller module
+layers. Error handling and the loading UI earn their space. Further abstractions
+or cuts have no demonstrated benefit here. This is a review of complexity, not a
+claim that cold-start behavior has been validated.
+
+### Proposal and backlog reconciliation
+
+Created [HAI-4] through [HAI-11] with `hai-tasks create`, each labelled `steward`
+under `Unverified proposals`, with acceptance criteria and dependencies in both
+the tracker and description frontmatter. They correspond to remediation steps
+1–8 above and remain unpromoted. Cookie work is conditional on the public-content
+policy; original low-priority boundary/accessibility checks are folded into the
+relevant proposals. No speculative performance or checker work was filed.
+
+Existing deployment task [1], the scanner WAF issue and the five legacy
+acceptance-queue items retain their ownership and acceptance state. The old
+review's statement that no remediation tracker items exist is now historical.
+No service switch or deployment is authorized by these proposals.
+
+Validation for this audit: `python3 tools/check_tasks_md.py TASKS.md` passes.
+The Hai readback verifies proposal state, steward labels, descriptions and
+prerequisite references. Original review text is byte-for-byte preserved as the
+prefix of this document; only this dated section was appended.
+
+[1]: tasks/1-scaleway-deployment.md
+[HAI-4]: tasks/4-fix-audio-request-ownership-and-retry-recovery.md
+[HAI-5]: tasks/5-activate-replacement-audio-only-when-it-can-play.md
+[HAI-6]: tasks/6-validate-audio-stream-bytes-and-failure-recovery.md
+[HAI-7]: tasks/7-verify-a-reproducible-youtube-capable-release-image.md
+[HAI-8]: tasks/8-bound-public-audio-work-and-decide-safe-cookie-policy.md
+[HAI-9]: tasks/9-bound-browser-audio-retention-and-clean-retired-tracks.md
+[HAI-10]: tasks/10-use-backend-format-metadata-for-playback-and-downloads.md
+[HAI-11]: tasks/11-document-actual-contracts-and-finish-the-existing-release-gate.md

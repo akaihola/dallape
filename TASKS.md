@@ -4,6 +4,42 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Unverified proposals
 
+- [11] Document actual contracts and finish the existing release gate
+    - Depends on: [4], [5], [6], [7], [8], [9], [10]
+
+  <!-- hai:{"id":"simple-3843159a-e875-4f62-b0ce-57547499e312","labels":["steward"],"createdAt":"2026-10-19T11:15:26.828Z","updatedAt":"2026-10-19T11:15:26.828Z"} -->
+
+- [10] Use backend format metadata for playback and downloads
+    - Depends on: [5]
+
+  <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-19T11:15:26.542Z"} -->
+
+- [9] Bound browser audio retention and clean retired tracks
+    - Depends on: [4], [5]
+
+  <!-- hai:{"id":"simple-6f6789e7-3748-490c-97d8-cdb26ac151fc","labels":["steward"],"createdAt":"2026-10-19T11:15:26.218Z","updatedAt":"2026-10-19T11:15:26.218Z"} -->
+
+- [8] Bound public audio work and decide safe cookie policy
+    - Depends on: [6], [7]
+
+  <!-- hai:{"id":"simple-add37768-9d63-44e2-8737-78af0f311881","labels":["steward"],"createdAt":"2026-10-19T11:15:25.934Z","updatedAt":"2026-10-19T11:15:25.934Z"} -->
+
+- [7] Verify a reproducible YouTube-capable release image
+  <!-- hai:{"id":"simple-780b4cb2-dcde-49ed-b332-27058aaa9e22","labels":["steward"],"createdAt":"2026-10-19T11:15:25.662Z","updatedAt":"2026-10-19T11:15:25.662Z"} -->
+
+- [6] Validate audio stream bytes and failure recovery
+    - Depends on: [4]
+
+  <!-- hai:{"id":"simple-8e0f78ba-f8d0-493a-a5aa-a70cbcb622ab","labels":["steward"],"createdAt":"2026-10-19T11:15:25.358Z","updatedAt":"2026-10-19T11:15:25.358Z"} -->
+
+- [5] Activate replacement audio only when it can play
+    - Depends on: [4]
+
+  <!-- hai:{"id":"simple-07d103ef-891b-4179-8e54-1b81a6cb7c3d","labels":["steward"],"createdAt":"2026-10-19T11:15:25.075Z","updatedAt":"2026-10-19T11:15:25.075Z"} -->
+
+- [4] Fix audio request ownership and retry recovery
+  <!-- hai:{"id":"simple-b2093cf7-c9ea-4453-80cb-a8ecd7453b3f","labels":["steward"],"createdAt":"2026-10-19T11:15:24.739Z","updatedAt":"2026-10-19T11:15:24.739Z"} -->
+
 ## Ordered backlog
 
 ## Scheduled
@@ -40,9 +76,25 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 [2]: docs/tasks/2-gather-acceptance-evidence-for-the-5-legacy-review-queue-items.md
 
-<!-- hai:reserved-numbers:1,2,3 -->
+<!-- hai:reserved-numbers:1,2,3,4,5,6,7,8,9,10,11 -->
 
 [3]: docs/tasks/3-check-the-2026-09-19-architecture-review-s-remediation-plan-against-th.md
+
+[4]: docs/tasks/4-fix-audio-request-ownership-and-retry-recovery.md
+
+[5]: docs/tasks/5-activate-replacement-audio-only-when-it-can-play.md
+
+[6]: docs/tasks/6-validate-audio-stream-bytes-and-failure-recovery.md
+
+[7]: docs/tasks/7-verify-a-reproducible-youtube-capable-release-image.md
+
+[8]: docs/tasks/8-bound-public-audio-work-and-decide-safe-cookie-policy.md
+
+[9]: docs/tasks/9-bound-browser-audio-retention-and-clean-retired-tracks.md
+
+[10]: docs/tasks/10-use-backend-format-metadata-for-playback-and-downloads.md
+
+[11]: docs/tasks/11-document-actual-contracts-and-finish-the-existing-release-gate.md
 
 ## Rules
 
