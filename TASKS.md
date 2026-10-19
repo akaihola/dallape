@@ -46,16 +46,16 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In Progress
 
-- [~] [3] Check the 2026-09-19 architecture review's remediation plan against the
-  code and draft what remains
-      <!-- hai:{"id":"simple-8b6762e0-3247-4251-8e4d-7d32bc872963","labels":["steward","review"],"createdAt":"2026-10-19T11:13:09.552Z","updatedAt":"2026-10-19T11:14:00.736Z"} -->
-
 - [*] Scanners found the hostname within two minutes of the certificate being issued,
   and each probe wakes the container. That costs little, but it means fewer true cold
   starts. Let's block the obvious probe paths (`/.env*`, `/.git/*`) with a Cloudflare
   WAF rule.
 
 ## Completed / Accepted
+
+- [ ] [3] Check the 2026-09-19 architecture review's remediation plan against the
+  code and draft what remains
+      <!-- hai:{"id":"simple-8b6762e0-3247-4251-8e4d-7d32bc872963","labels":["steward","review"],"createdAt":"2026-10-19T11:13:09.552Z","updatedAt":"2026-10-19T11:17:13.052Z"} -->
 
 - [ ] [2] Gather acceptance evidence for the 5 legacy review-queue items
       <!-- hai:{"id":"simple-365744dc-1e09-4c8c-a42e-0f545e074764","labels":["steward"],"createdAt":"2026-10-17T20:09:29.021Z","updatedAt":"2026-10-17T20:16:19.405Z"} -->
