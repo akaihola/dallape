@@ -31,12 +31,12 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Scheduled
 
-- [5] Activate replacement audio only when it can play
+## In Progress
+
+- [~] [5] Activate replacement audio only when it can play
     - Depends on: [4]
 
-  <!-- hai:{"id":"simple-07d103ef-891b-4179-8e54-1b81a6cb7c3d","labels":["steward"],"createdAt":"2026-10-19T11:15:25.075Z","updatedAt":"2026-10-19T14:26:53.129Z"} -->
-
-## In Progress
+      <!-- hai:{"id":"simple-07d103ef-891b-4179-8e54-1b81a6cb7c3d","labels":["steward"],"createdAt":"2026-10-19T11:15:25.075Z","updatedAt":"2026-10-19T14:27:04.637Z"} -->
 
 - [*] Scanners found the hostname within two minutes of the certificate being issued,
   and each probe wakes the container. That costs little, but it means fewer true cold
