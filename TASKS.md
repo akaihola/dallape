@@ -38,17 +38,17 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In Progress
 
-- [~] [6] Validate audio stream bytes and failure recovery
-    - Depends on: [4]
-
-      <!-- hai:{"id":"simple-8e0f78ba-f8d0-493a-a5aa-a70cbcb622ab","labels":["steward"],"createdAt":"2026-10-19T11:15:25.358Z","updatedAt":"2026-10-19T14:23:21.071Z"} -->
-
 - [*] Scanners found the hostname within two minutes of the certificate being issued,
   and each probe wakes the container. That costs little, but it means fewer true cold
   starts. Let's block the obvious probe paths (`/.env*`, `/.git/*`) with a Cloudflare
   WAF rule.
 
 ## Completed / Accepted
+
+- [ ] [6] Validate audio stream bytes and failure recovery
+    - Depends on: [4]
+
+      <!-- hai:{"id":"simple-8e0f78ba-f8d0-493a-a5aa-a70cbcb622ab","labels":["steward"],"createdAt":"2026-10-19T11:15:25.358Z","updatedAt":"2026-10-19T14:26:16.324Z"} -->
 
 - [ ] [4] Fix audio request ownership and retry recovery
       <!-- hai:{"id":"simple-b2093cf7-c9ea-4453-80cb-a8ecd7453b3f","labels":["steward"],"createdAt":"2026-10-19T11:15:24.739Z","updatedAt":"2026-10-19T14:22:34.152Z"} -->
