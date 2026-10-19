@@ -26,12 +26,12 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Scheduled
 
-- [10] Use backend format metadata for playback and downloads
+## In Progress
+
+- [~] [10] Use backend format metadata for playback and downloads
     - Depends on: [5]
 
-  <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-19T14:35:24.274Z"} -->
-
-## In Progress
+      <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-19T14:35:42.833Z"} -->
 
 - [*] Scanners found the hostname within two minutes of the certificate being issued,
   and each probe wakes the container. That costs little, but it means fewer true cold
