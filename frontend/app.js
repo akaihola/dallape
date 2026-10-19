@@ -6,6 +6,11 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
   const audio = document.getElementById("audio");
   const formatsEl = document.getElementById("formats");
   const errorEl = document.getElementById("video-error");
+  const configured = window.DALLAPE_AUDIO_CACHE ?? {};
+  const limit = (value, fallback) => Number.isSafeInteger(value) && value > 0 ? value : fallback;
+  const maxVideos = configured.enabled === false ? Infinity : limit(configured.maxVideos, 3);
+  const maxBytes = configured.enabled === false ? Infinity : limit(configured.maxBytes, 192 * 1048576);
+  let clock = 0;
   const videos = new Map(); // video id -> { id, title, formats: null | Map(id -> metadata), loading, tracks: Map(format id -> track), wanted }
   let video = null; // state of the video in the player
   let player = null;
@@ -16,7 +21,7 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
   let playerLoading = null;
   let playerUsable = false;
 
-  const api = (path, params) => fetch(`${API}${path}?${new URLSearchParams(params)}`);
+  const api = (path, params, signal) => fetch(`${API}${path}?${new URLSearchParams(params)}`, { signal });
   const catalog = new Map(YOUTUBE_AUDIO_FORMATS.map(f => [f.id, { ...f, speculative: true }]));
   const columns = new Map([...catalog].map(([id, f]) => [id, renderColumn(f)]));
   const bitrate = fmt => fmt.abr > 0 ? `${fmt.speculative ? "Estimated " : ""}${fmt.abr} kbps` : "Unknown bitrate";
@@ -106,9 +111,21 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     if (!parsed || (parsed.id === video?.id && playerUsable)) return;
     const request = ++submission;
     stopAudio();
+    if (video) {
+      video.controller?.abort();
+      video.loading = null;
+      for (const track of video.tracks.values()) if (!track.done) retireTrack(video, track);
+    }
     if (!videos.has(parsed.id)) videos.set(parsed.id, { id: parsed.id, title: null, formats: null, loading: null, tracks: new Map(), wanted: null });
     video = videos.get(parsed.id);
     video.wanted = null;
+    videos.delete(video.id);
+    videos.set(video.id, video);
+    while (videos.size > maxVideos) {
+      const oldest = videos.values().next().value;
+      for (const track of oldest.tracks.values()) retireTrack(oldest, track);
+      videos.delete(oldest.id);
+    }
     formatsEl.hidden = document.getElementById("hint").hidden = true;
     try {
       const readyPlayer = await preparePlayer();
@@ -144,9 +161,11 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
   }
 
   async function loadFormats(v) {
-    const res = await api("/api/formats", { url: v.id });
+    const controller = v.controller = new AbortController();
+    const res = await api("/api/formats", { url: v.id }, controller.signal);
     if (!res.ok) throw new Error((await res.json()).detail ?? res.statusText);
     const data = await res.json();
+    if (controller.signal.aborted) return;
     v.title = data.title;
     v.formats = new Map(data.formats.map(f => [f.format_id, {
       id: f.format_id, ext: f.ext, codec: f.acodec ?? "Unknown codec", abr: f.abr,
@@ -160,11 +179,12 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     const v = video;
     const request = submission;
     if (attachment?.track.fmt.id !== fmt.id) stopAudio();
+    for (const track of v.tracks.values()) if (!track.done && track.fmt.id !== fmt.id) retireTrack(v, track);
     v.wanted = fmt.id;
     errorEl.value = "";
     render();
     try {
-      if (!v.formats) await (v.loading ??= loadFormats(v).finally(() => { v.loading = null; })); // first click only, shared by concurrent clicks
+      if (!v.formats) await (v.loading ??= loadFormats(v).finally(() => { if (request === submission) v.loading = null; })); // first click only, shared by concurrent clicks
     } catch (err) {
       if (request === submission && v.wanted === fmt.id) {
         v.wanted = null;
@@ -182,46 +202,79 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     }
     fmt = v.formats.get(fmt.id);
     if (!v.tracks.has(fmt.id)) fetchTrack(v, fmt);
+    const track = v.tracks.get(fmt.id);
+    if (track) track.used = ++clock;
     maybeSwitch(v);
   }
 
   // --- tracks ---------------------------------------------------------------
 
+  function retireTrack(v, track) {
+    if (attachment?.track === track) stopAudio();
+    v.tracks.delete(track.fmt.id);
+    track.controller.abort();
+    track.reader?.cancel().catch(() => {});
+    track.reader = null;
+    track.append = track.finish = null;
+    track.chunks.length = 0;
+    if (track.blobUrl) URL.revokeObjectURL(track.blobUrl);
+    track.blobUrl = null;
+  }
+
+  // Reserve three encoded copies: chunks, Blob construction and MediaSource input.
+  // Decoder/transport allocations belong to the browser and are observed separately.
+  function reserve(track, bytes) {
+    const entries = [...videos.values()].flatMap(v => [...v.tracks.values()].map(t => [v, t]));
+    let retained = entries.reduce((sum, [, t]) => sum + t.received * 3, bytes * 3);
+    for (const [v, candidate] of entries.sort((a, b) => a[1].used - b[1].used)) {
+      if (retained <= maxBytes) break;
+      if (candidate === track || candidate === attachment?.track || (v === video && candidate.fmt.id === v.wanted)) continue;
+      retained -= candidate.received * 3;
+      retireTrack(v, candidate);
+    }
+    if (retained > maxBytes) throw new Error("Audio cache byte budget exceeded");
+  }
+
   async function fetchTrack(v, fmt) {
     const request = submission;
-    const track = { fmt, chunks: [], received: 0, total: 0, done: false, append: null, finish: null, blobUrl: null };
+    const track = { fmt, chunks: [], received: 0, total: 0, done: false, append: null, finish: null, blobUrl: null, controller: new AbortController(), reader: null, used: ++clock };
     v.tracks.set(fmt.id, track);
     try {
-      const res = await api("/api/audio", { url: v.id, format: fmt.id });
+      const res = await api("/api/audio", { url: v.id, format: fmt.id }, track.controller.signal);
       if (!res.ok) throw new Error((await res.json()).detail ?? res.statusText);
       if (v.tracks.get(fmt.id) !== track) { await res.body?.cancel(); return; }
       const length = res.headers.get("Content-Length");
       const expected = length === null ? null : Number(length);
       if (expected !== null && (!Number.isSafeInteger(expected) || expected < 0)) throw new Error("Invalid audio length");
       track.total = expected ?? 0;
-      const reader = res.body.getReader();
+      const reader = track.reader = res.body.getReader();
       try {
         for (;;) {
-          const { value, done } = await reader.read();
+          let { value, done } = await reader.read();
           if (v.tracks.get(fmt.id) !== track) return;
           if (done) break;
           if (expected !== null && track.received + value.length > expected) throw new Error("Audio length mismatch");
+          reserve(track, value.byteLength);
+          if (value.buffer.byteLength !== value.byteLength) value = value.slice();
           track.chunks.push(value);
           track.received += value.length;
           track.append?.(value);
+          if (v.tracks.get(fmt.id) !== track) return;
           if (request === submission) { render(); maybeSwitch(v); }
         }
         if (expected !== null && track.received !== expected) throw new Error("Audio length mismatch");
-      } finally { await reader.cancel(); }
+      } finally { await reader.cancel(); reader.releaseLock?.(); track.reader = null; }
+      if (v.tracks.get(fmt.id) !== track) return;
       track.done = true;
       track.total = track.received;
       track.blobUrl = URL.createObjectURL(new Blob(track.chunks, { type: fmt.mime.split(";")[0] }));
+      track.chunks.length = 0;
       track.finish?.();
     } catch (err) {
       if (v.tracks.get(fmt.id) !== track) return;
-      v.tracks.delete(fmt.id); // allow a retry on the next click
       if (attachment?.track === track) failAudio(attachment, err);
-      else if (request === submission && v.wanted === fmt.id) {
+      retireTrack(v, track);
+      if (request === submission && v.wanted === fmt.id) {
         v.wanted = null;
         errorEl.value = `Could not fetch ${label(fmt)}: ${err.message}. Click the format to retry.`;
       }
@@ -244,9 +297,9 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
   function failAudio(owner, err) {
     if (attachment !== owner) return;
     const { v, track } = owner;
-    if (!track.done) v.tracks.delete(track.fmt.id);
     v.wanted = null;
     stopAudio();
+    if (!track.done) retireTrack(v, track);
     errorEl.value = `Could not play ${label(track.fmt)} in this browser: ${err.message}. Click the format to retry. Completed files remain available to download.`;
     render();
   }
@@ -266,11 +319,12 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
       const ms = new window.MediaSource();
       const queue = [...track.chunks];
       track.append = (chunk) => { if (current()) queue.push(chunk); };
-      ms.addEventListener("sourceopen", () => {
+      let sb, pump, bufferError;
+      const open = () => {
         if (!current()) return;
         try {
-          const sb = ms.addSourceBuffer(track.fmt.mime);
-          const pump = () => {
+          sb = ms.addSourceBuffer(track.fmt.mime);
+          pump = () => {
             if (!current() || sb.updating || ms.readyState !== "open") return;
             try {
               if (queue.length) sb.appendBuffer(queue.shift());
@@ -278,12 +332,26 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
             } catch (err) { failAudio(owner, err); }
           };
           sb.addEventListener("updateend", pump);
-          sb.addEventListener("error", () => failAudio(owner, new Error("Audio decoding failed")));
+          bufferError = () => failAudio(owner, new Error("Audio decoding failed"));
+          sb.addEventListener("error", bufferError);
           track.append = (chunk) => { if (current()) { queue.push(chunk); pump(); } };
           track.finish = pump;
           pump();
         } catch (err) { failAudio(owner, err); }
-      }, { once: true });
+      };
+      ms.addEventListener("sourceopen", open, { once: true });
+      owner.cleanup = () => {
+        queue.length = 0;
+        ms.removeEventListener("sourceopen", open);
+        if (sb) {
+          sb.removeEventListener("updateend", pump);
+          sb.removeEventListener("error", bufferError);
+          if (ms.readyState === "open") {
+            try { sb.abort(); } catch { /* Already detached. */ }
+          }
+          try { ms.removeSourceBuffer(sb); } catch { /* Already detached. */ }
+        }
+      };
       owner.url = URL.createObjectURL(ms);
       audio.src = owner.url;
     } catch (err) { failAudio(owner, err); }
@@ -299,6 +367,7 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
   function stopAudio() {
     if (attachment) {
       restoreOriginal(attachment);
+      attachment.cleanup?.();
       attachment.track.append = attachment.track.finish = null;
       if (attachment.url) URL.revokeObjectURL(attachment.url);
     }
@@ -307,6 +376,7 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     audio.onerror = audio.oncanplay = audio.onprogress = audio.onseeked = audio.onwaiting = null;
     audio.pause();
     audio.removeAttribute("src");
+    audio.load?.();
   }
 
   function syncAudio() {
@@ -366,6 +436,7 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
       if (!columns.has(id)) columns.set(id, renderColumn(fmt));
     }
     for (const [id, el] of columns) {
+      if (!catalog.has(id) && !video.formats?.has(id)) { el.remove(); columns.delete(id); continue; }
       const track = video.tracks.get(id);
       el.classList.toggle("disabled", !!video.formats && !video.formats.has(id));
       el.classList.toggle("active", activeFormat === id);
@@ -391,11 +462,23 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
       if (video.wanted === id && activeFormat !== id) el.querySelector(".size").textContent += " · Loading audio";
       const a = el.querySelector(".download");
       a.hidden = !track?.done;
+      if (!track?.done) a.removeAttribute("href");
       if (track?.done) { a.href = track.blobUrl; a.download = track.fmt.filename ?? `${video.title ?? video.id} ${bitrate(track.fmt)} [${id}].${track.fmt.ext ?? "bin"}`; }
     }
   }
 
+  // Ownership diagnostics: no references to retained tracks or byte arrays escape.
+  const cacheStats = () => {
+    const tracks = [...videos.values()].flatMap(v => [...v.tracks.values()]);
+    return {
+      videos: videos.size, tracks: tracks.length,
+      reservedBytes: tracks.reduce((sum, t) => sum + t.received * 3, 0),
+      chunkBytes: tracks.reduce((sum, t) => sum + t.chunks.reduce((bytes, c) => bytes + c.byteLength, 0), 0),
+    };
+  };
+
   setInterval(() => { syncAudio(); if (video) { maybeSwitch(video); render(); } }, 250);
+  return { cacheStats };
 }
 
 if (typeof document !== "undefined") startApp(globalThis);

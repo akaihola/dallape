@@ -69,8 +69,30 @@ Selecting a completed file again retries through Blob playback. Incomplete
 failed tracks are discarded and can be fetched again.
 
 Once caching completes, the measured file size replaces the metadata size and
-the download button is enabled. A fully fetched audio file is also fully cached on the frontend
-so the backend can discard the data and scale to zero.
+the download button is enabled. A fully fetched audio file is cached on the
+frontend while retained, so the backend can discard the data and scale to zero.
+
+Caching is tab-local and fetch-once applies only while a track remains retained.
+`frontend/config.js` configures `DALLAPE_AUDIO_CACHE`: by default at most three
+videos and 192 MiB of reserved encoded audio. Videos use least recently visited
+order; tracks use least recently selected order under byte pressure. The selected
+track is protected from eviction. Each track reserves three times its received
+bytes, conservatively covering original chunks, Blob construction and MediaSource
+input; thus the default admits at most 64 MiB of audio files. Chunks are released
+at completion. Browser transport, decoder memory and delayed garbage collection
+are outside this ownership budget; it is not a process-memory limit.
+
+Changing video or format aborts incomplete audio transfers; changing video also
+aborts its metadata request. An oversized track stops with a budget error and can
+be retried after increasing the limit. Eviction revokes retired URLs and removes
+download links; selecting an evicted format refetches it. Active playback and
+retained download URLs remain valid. Already started downloads are handled by
+the browser. Reloading the tab clears the entire cache.
+
+Set `DALLAPE_AUDIO_CACHE.enabled` to `false` to roll back budget enforcement
+independently of request ownership, playback readiness and resource cleanup.
+This restores unbounded completed-file retention; re-enable and reload to restore
+the limits. Positive integer limits are required; invalid values use defaults.
 
 ### Video URLs and IDs
 

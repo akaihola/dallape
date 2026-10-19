@@ -21,6 +21,7 @@ class Element {
     this.classList = { toggle: (name, on) => on ? this.classes.add(name) : this.classes.delete(name) };
   }
   addEventListener(name, callback) { this.listeners[name] = callback; }
+  removeEventListener(name, callback) { if (this.listeners[name] === callback) delete this.listeners[name]; }
   emit(name, event = {}) { return this.listeners[name]?.(event); }
   append(el) { this.children.push(el); }
   replaceChildren(el) { this.children = [el]; }
@@ -33,10 +34,10 @@ class Element {
   removeAttribute(name) { this[name] = ""; }
 }
 
-function setup({ script = false, mse = false } = {}) {
+function setup({ script = false, mse = false, cache } = {}) {
   const elements = new Map();
   const get = id => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); };
-  const requests = [], players = [], sources = [], blobs = [], timers = new Map();
+  const requests = [], players = [], sources = [], blobs = [], revoked = [], timers = new Map();
   let tick, serial = 0;
   const audio = get("audio");
   audio.currentTime = 0; audio.paused = true; audio.readyState = 0; audio.duration = 100;
@@ -61,16 +62,17 @@ function setup({ script = false, mse = false } = {}) {
   class MediaSource extends Element {
     static isTypeSupported() { return true; }
     constructor() { super(); this.readyState = "open"; this.buffer = new Element(); sources.push(this); }
-    addSourceBuffer(mime) { this.mime = mime; this.buffer.appendBuffer = () => {}; return this.buffer; }
+    addSourceBuffer(mime) { this.mime = mime; this.buffer.appendBuffer = () => {}; this.buffer.abort = () => { this.buffer.aborted = true; }; return this.buffer; }
+    removeSourceBuffer(buffer) { assert.equal(buffer, this.buffer); this.buffer.removed = true; }
     endOfStream() { this.readyState = "ended"; }
   }
-  const window = {};
+  const window = { DALLAPE_AUDIO_CACHE: cache };
   const installAPI = () => { window.YT = { Player, PlayerState: { PLAYING: 1 } }; };
   if (!script) installAPI();
   if (mse) window.MediaSource = MediaSource;
   const document = { getElementById: get, createElement: () => new Element(), head: new Element() };
-  startApp({ window, document, Blob, URL: { createObjectURL: value => { if (value instanceof Blob) blobs.push(value); return `blob:${++serial}`; }, revokeObjectURL() {} },
-    fetch: url => { const result = deferred(); requests.push({ url, ...result }); return result.promise; },
+  const app = startApp({ window, document, Blob, URL: { createObjectURL: value => { if (value instanceof Blob) blobs.push(value); return `blob:${++serial}`; }, revokeObjectURL(url) { revoked.push(url); } },
+    fetch: (url, options) => { const result = deferred(); requests.push({ url, signal: options.signal, ...result }); return result.promise; },
     setInterval: callback => { tick = callback; },
     setTimeout: callback => { const id = ++serial; timers.set(id, callback); return id; },
     clearTimeout: id => timers.delete(id),
@@ -81,8 +83,9 @@ function setup({ script = false, mse = false } = {}) {
   const preview = async (id = A) => { const pending = submit(id); await flush(); players.at(-1).ready(); await pending; };
   const stream = (request, length = "10") => {
     const reads = [];
+    reads.cancelled = 0;
     request.resolve({ ok: true, headers: new Headers(length === null ? {} : { "Content-Length": length }),
-      body: { getReader: () => ({ read: () => { const next = deferred(); reads.push(next); return next.promise; }, cancel: async () => {} }) } });
+      body: { cancel: async () => { reads.cancelled++; }, getReader: () => ({ read: () => { const next = deferred(); reads.push(next); return next.promise; }, cancel: async () => { reads.cancelled++; } }) } });
     return reads;
   };
   const loadTrack = async (fmt = F) => {
@@ -98,7 +101,7 @@ function setup({ script = false, mse = false } = {}) {
     audio.buffered = { length: 1, start: () => start, end: () => end };
     tick(); await flush();
   };
-  return { blobs, playable, get, requests, players, sources, timers, audio, window, document, installAPI, submit, preview, click, column, stream, loadTrack, tick: () => tick() };
+  return { app, revoked, blobs, playable, get, requests, players, sources, timers, audio, window, document, installAPI, submit, preview, click, column, stream, loadTrack, tick: () => tick() };
 }
 
 test("metadata failure clears the shared request and a later click retries", async () => {
@@ -271,8 +274,9 @@ test("old audio response, chunks and completion cannot mute or attach to the new
   const pending = h.click(F); h.requests[0].resolve(metadata()); await pending;
   await h.submit(B);
   const reads = h.stream(h.requests[1]); await flush();
-  reads[0].resolve({ value: new Uint8Array(5), done: false }); await flush();
-  reads[1].resolve({ done: true }); await flush();
+  // A response arriving after cancellation is discarded without reading its body.
+  assert.equal(reads.length, 0);
+  assert.equal(reads.cancelled, 1);
   h.tick();
   assert.equal(h.players[0].muted, false);
   assert.equal(h.audio.src, "");
@@ -288,6 +292,9 @@ test("short and oversized audio never enable downloads and permit retry", async 
     assert.equal(h.column(F).querySelector(".download").hidden, true);
     assert.equal(h.players[0].muted, false);
     assert.match(h.get("video-error").value, /length mismatch.*retry/);
+    assert.equal(h.requests.at(-1).signal.aborted, true);
+    assert.equal(h.app.cacheStats().chunkBytes, 0);
+    assert.equal(h.app.cacheStats().tracks, 0);
     await h.click(F);
     assert.equal(h.requests.length, 3);
   }
@@ -367,7 +374,7 @@ test("original mute is preserved, and failed completed media remains download-on
 test("synchronous append failure is visible and restores the original", async () => {
   const h = setup({ mse: true }); await h.preview(); await h.loadTrack();
   const ms = h.sources[0];
-  ms.addSourceBuffer = () => ({ appendBuffer() { throw new Error("append failed"); }, addEventListener() {} });
+  ms.addSourceBuffer = () => ({ appendBuffer() { throw new Error("append failed"); }, addEventListener() {}, removeEventListener() {} });
   ms.emit("sourceopen");
   assert.equal(h.players[0].muted, false);
   assert.match(h.get("video-error").value, /append failed/);
@@ -434,8 +441,9 @@ test("captured variants render separately, select exact IDs and retain backend f
     assert.equal(el.querySelector(".download").download, f.filename);
     assert.equal(h.blobs.at(-1).type, f.mime.split(";")[0]);
   }
+  const retiredColumn = byId(h, captured.formats[0].format_id);
   await h.submit(B);
-  assert.equal(byId(h, captured.formats[0].format_id).hidden, true);
+  assert.equal(retiredColumn.removed, true);
   assert.equal(h.column(F).querySelector(".abr").textContent, "Estimated 30 kbps");
 });
 
@@ -471,4 +479,119 @@ test("no supported formats is distinct from browser playback limitations", async
   h.audio.onerror();
   assert.match(h.get("video-error").value, /in this browser/);
   assert.equal(h.column(F).querySelector(".download").hidden, false);
+});
+
+const cacheComplete = async (h, fmt = F) => {
+  const reads = await h.loadTrack(fmt);
+  reads[1].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  reads[2].resolve({ done: true }); await flush();
+  return h.column(fmt).querySelector(".download").href;
+};
+
+test("video LRU bounds retention, keeps selected URLs valid and refetches evicted videos", async () => {
+  const h = setup({ cache: { maxVideos: 2, maxBytes: 90 } }); await h.preview();
+  const first = await cacheComplete(h);
+  await h.submit(B); const second = await cacheComplete(h);
+  await h.submit(A); await h.click(F); // A becomes most recently visited; no refetch.
+  assert.equal(h.requests.length, 4);
+  assert.equal(h.audio.src, first);
+  assert.ok(!h.revoked.includes(first));
+  await h.submit("zzzzzzzzzzz"); const third = await cacheComplete(h);
+  assert.ok(h.revoked.includes(second));
+  assert.ok(!h.revoked.includes(first));
+  assert.ok(!h.revoked.includes(third));
+  assert.deepEqual(h.app.cacheStats(), { videos: 2, tracks: 2, reservedBytes: 60, chunkBytes: 0 });
+  await h.submit(B); await cacheComplete(h);
+  assert.equal(h.requests.length, 8);
+  assert.ok(h.revoked.includes(first));
+});
+
+test("byte pressure evicts completed tracks, clears links and protects current playback", async () => {
+  const h = setup({ cache: { maxBytes: 30 } }); await h.preview();
+  const first = await cacheComplete(h); await h.playable();
+  assert.equal(h.audio.src, first);
+  const second = await cacheComplete(h, G);
+  assert.ok(h.revoked.includes(first));
+  assert.ok(!h.revoked.includes(second));
+  assert.equal(h.column(F).querySelector(".download").href, "");
+  assert.equal(h.column(F).querySelector(".download").hidden, true);
+  assert.equal(h.audio.src, second);
+  assert.deepEqual(h.app.cacheStats(), { videos: 1, tracks: 1, reservedBytes: 30, chunkBytes: 0 });
+  await h.click(F);
+  assert.equal(h.requests.length, 4);
+});
+
+test("unknown-length oversize streams abort and release all ownership before retry", async () => {
+  const h = setup({ mse: true, cache: { maxBytes: 15 } }); await h.preview();
+  const pick = h.click(F); h.requests[0].resolve(metadata()); await pick;
+  const request = h.requests[1], reads = h.stream(request, null); await flush();
+  reads[0].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  const url = h.audio.src, source = h.sources[0]; source.emit("sourceopen");
+  const late = source.buffer.listeners.updateend;
+  await h.playable();
+  reads[1].resolve({ value: new Uint8Array(1), done: false }); await flush();
+  assert.equal(request.signal.aborted, true);
+  assert.ok(reads.cancelled > 0);
+  assert.ok(h.revoked.includes(url));
+  assert.deepEqual(source.listeners, {});
+  assert.deepEqual(source.buffer.listeners, {});
+  assert.equal(source.buffer.aborted, true);
+  assert.equal(source.buffer.removed, true);
+  assert.equal(h.players[0].muted, false);
+  assert.equal(h.audio.src, "");
+  assert.match(h.get("video-error").value, /byte budget exceeded.*retry/);
+  assert.deepEqual(h.app.cacheStats(), { videos: 1, tracks: 0, reservedBytes: 0, chunkBytes: 0 });
+  late();
+  await h.click(F); assert.equal(h.requests.length, 3);
+});
+
+test("navigation cancels metadata and streams; late EOF cannot create a Blob", async () => {
+  const h = setup({ mse: true }); await h.preview();
+  const pick = h.click(F), metadataRequest = h.requests[0];
+  await h.submit(B);
+  assert.equal(metadataRequest.signal.aborted, true);
+  metadataRequest.resolve(metadata()); await pick;
+  assert.equal(h.requests.length, 1);
+  const reads = await h.loadTrack(), request = h.requests.at(-1), url = h.audio.src;
+  await h.submit(A);
+  assert.equal(request.signal.aborted, true);
+  assert.ok(reads.cancelled > 0);
+  assert.ok(h.revoked.includes(url));
+  reads[1].resolve({ done: true }); await flush();
+  assert.equal(h.blobs.length, 0);
+  assert.equal(h.app.cacheStats().reservedBytes, 0);
+});
+
+test("success frees redundant chunks; playback error preserves download until retirement", async () => {
+  const h = setup({ mse: true, cache: { maxVideos: 1 } }); await h.preview();
+  const blob = await cacheComplete(h), source = h.sources[0], mseUrl = h.audio.src;
+  assert.equal(h.app.cacheStats().chunkBytes, 0);
+  source.emit("sourceopen");
+  source.buffer.emit("updateend"); source.buffer.emit("updateend");
+  assert.equal(source.readyState, "ended");
+  h.audio.onerror();
+  assert.equal(source.buffer.removed, true);
+  assert.ok(h.revoked.includes(mseUrl));
+  assert.ok(!h.revoked.includes(blob));
+  assert.deepEqual(source.listeners, {});
+  await h.click(F);
+  assert.equal(h.audio.src, blob);
+  assert.equal(h.requests.length, 2);
+  await h.submit(B);
+  assert.ok(h.revoked.includes(blob));
+  assert.equal(h.app.cacheStats().tracks, 0);
+});
+
+test("budget rollback keeps completed files while still cleaning aborted transfers", async () => {
+  const h = setup({ cache: { enabled: false, maxVideos: 1, maxBytes: 1 } }); await h.preview();
+  const first = await cacheComplete(h);
+  await h.submit(B); await cacheComplete(h);
+  assert.equal(h.app.cacheStats().videos, 2);
+  assert.equal(h.app.cacheStats().tracks, 2);
+  assert.ok(!h.revoked.includes(first));
+  const reads = await h.loadTrack(G), request = h.requests.at(-1);
+  await h.submit(A);
+  assert.equal(request.signal.aborted, true);
+  assert.ok(reads.cancelled > 0);
+  assert.equal(h.app.cacheStats().chunkBytes, 0);
 });
