@@ -28,10 +28,9 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In Progress
 
-- [*] Scanners found the hostname within two minutes of the certificate being issued,
-  and each probe wakes the container. That costs little, but it means fewer true cold
-  starts. Let's block the obvious probe paths (`/.env*`, `/.git/*`) with a Cloudflare
-  WAF rule.
+- [~] [*] Deploy the scanner-probe WAF rule defined in
+      `docs/tasks/1-scaleway-deployment.md` (needs a Zone WAF Write token).
+      <!-- hai:{"id":"simple-f44c0a9406fd9745","updatedAt":"2026-10-19T15:29:01.637Z"} -->
 
 ## Completed / Accepted
 
