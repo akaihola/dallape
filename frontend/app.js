@@ -151,17 +151,23 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     if (!video) return;
     const v = video;
     const request = submission;
+    if (attachment?.track.fmt.id !== fmt.id) stopAudio();
     v.wanted = fmt.id;
     errorEl.value = "";
+    render();
     try {
       if (!v.formats) await (v.loading ??= loadFormats(v).finally(() => { v.loading = null; })); // first click only, shared by concurrent clicks
     } catch (err) {
-      if (request === submission && v.wanted === fmt.id) errorEl.value = `Could not list audio formats: ${err.message}. Click a format to retry.`;
+      if (request === submission && v.wanted === fmt.id) {
+        v.wanted = null;
+        errorEl.value = `Could not list audio formats: ${err.message}. Click a format to retry.`;
+        render();
+      }
       return;
     }
     if (request !== submission || v.wanted !== fmt.id || !playerUsable) return;
     render();
-    if (!v.formats.has(fmt.id)) return;
+    if (!v.formats.has(fmt.id)) { v.wanted = null; render(); return; }
     if (!v.tracks.has(fmt.id)) fetchTrack(v, fmt);
     maybeSwitch(v);
   }
@@ -202,21 +208,21 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
       if (v.tracks.get(fmt.id) !== track) return;
       v.tracks.delete(fmt.id); // allow a retry on the next click
       if (attachment?.track === track) failAudio(attachment, err);
-      else if (request === submission && v.wanted === fmt.id) errorEl.value = `Could not fetch ${fmt.codec} ${fmt.abr} kbps: ${err.message}. Click the format to retry.`;
+      else if (request === submission && v.wanted === fmt.id) {
+        v.wanted = null;
+        errorEl.value = `Could not fetch ${fmt.codec} ${fmt.abr} kbps: ${err.message}. Click the format to retry.`;
+      }
     }
     if (request === submission) { render(); maybeSwitch(v); }
   }
 
-  /** Switch the preview's sound to the wanted track once it covers the playback position. */
+  /** Attach early for decoding, but leave the original audible until playback succeeds. */
   function maybeSwitch(v) {
     if (v !== video || !playerUsable) return;
     const track = v.tracks.get(v.wanted);
-    if (!track || activeFormat === v.wanted) return;
-    const covered = track.done || (track.total && (track.received / track.total) * player.getDuration() > player.getCurrentTime() + 1);
-    if (!covered || (!track.done && !window.MediaSource?.isTypeSupported(track.fmt.mime))) return;
+    if (!track || attachment?.track === track) return;
+    if (!track.done && !window.MediaSource?.isTypeSupported(track.fmt.mime)) return;
     stopAudio();
-    activeFormat = v.wanted;
-    player.mute();
     attachTrack(track);
     syncAudio();
     render();
@@ -225,15 +231,19 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
   function failAudio(owner, err) {
     if (attachment !== owner) return;
     const { v, track } = owner;
-    v.tracks.delete(track.fmt.id);
+    if (!track.done) v.tracks.delete(track.fmt.id);
+    v.wanted = null;
     stopAudio();
-    errorEl.value = `Could not play ${track.fmt.codec} ${track.fmt.abr} kbps: ${err.message}. Click the format to retry.`;
+    errorEl.value = `Could not play ${track.fmt.codec} ${track.fmt.abr} kbps: ${err.message}. Click the format to retry. Completed files remain available to download.`;
     render();
   }
 
   function attachTrack(track) {
-    const owner = attachment = { v: video, track, url: null };
+    const owner = attachment = { v: video, track, url: null, originalMuted: player.isMuted(), playPending: false };
+    audio.muted = true;
     const current = () => attachment === owner;
+    const update = () => { if (current()) { syncAudio(); render(); } };
+    audio.oncanplay = audio.onprogress = audio.onseeked = audio.onwaiting = update;
     audio.onerror = () => failAudio(owner, new Error("Audio playback failed"));
     if (track.done) {
       audio.src = track.blobUrl;
@@ -266,17 +276,24 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     } catch (err) { failAudio(owner, err); }
   }
 
+  function restoreOriginal(owner) {
+    audio.muted = true;
+    activeFormat = null;
+    if (owner.originalMuted) player?.mute?.();
+    else player?.unMute?.();
+  }
+
   function stopAudio() {
     if (attachment) {
+      restoreOriginal(attachment);
       attachment.track.append = attachment.track.finish = null;
       if (attachment.url) URL.revokeObjectURL(attachment.url);
     }
     attachment = null;
     activeFormat = null;
-    audio.onerror = null;
+    audio.onerror = audio.oncanplay = audio.onprogress = audio.onseeked = audio.onwaiting = null;
     audio.pause();
     audio.removeAttribute("src");
-    player?.unMute?.();
   }
 
   function syncAudio() {
@@ -285,9 +302,42 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     try {
       const t = player.getCurrentTime();
       const playing = player.getPlayerState() === window.YT.PlayerState.PLAYING;
-      if (Math.abs(audio.currentTime - t) > 0.3) audio.currentTime = t;
-      if (playing && audio.paused) audio.play().catch((err) => failAudio(owner, err));
-      if (!playing && !audio.paused) audio.pause();
+      audio.playbackRate = player.getPlaybackRate();
+      audio.volume = player.getVolume() / 100;
+      if (Math.abs(audio.currentTime - t) > 0.3) {
+        restoreOriginal(owner);
+        audio.currentTime = t;
+      }
+      // Byte counts say nothing about decoded timestamps. Require a small runway
+      // at the requested time, capped at the end of a completed file.
+      const end = owner.track.done ? Math.min(t + 0.25 * audio.playbackRate, audio.duration) : t + 0.25 * audio.playbackRate;
+      let covered = false;
+      for (let i = 0; i < audio.buffered.length; i++) {
+        if (audio.buffered.start(i) <= t && audio.buffered.end(i) >= end && end > t) covered = true;
+      }
+      if (!playing || audio.seeking || audio.readyState < 3 || !covered) {
+        restoreOriginal(owner);
+        audio.pause();
+        return;
+      }
+      if (audio.paused) {
+        restoreOriginal(owner);
+        if (!owner.playPending) {
+          owner.playPending = true;
+          // Request audible playback so autoplay denial rejects visibly instead
+          // of succeeding muted and being paused by the browser on unmute.
+          audio.muted = owner.originalMuted;
+          audio.play().then(() => {
+            owner.playPending = false;
+            if (attachment === owner) { syncAudio(); render(); }
+          }, (err) => failAudio(owner, err));
+        }
+        return;
+      }
+      if (owner.playPending) return;
+      player.mute();
+      audio.muted = owner.originalMuted;
+      activeFormat = owner.track.fmt.id;
     } catch (err) { failAudio(owner, err); }
   }
 
@@ -303,11 +353,17 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
       const track = video.tracks.get(id);
       el.classList.toggle("disabled", !!video.formats && !video.formats.has(id));
       el.classList.toggle("active", activeFormat === id);
+      const fmt = YOUTUBE_AUDIO_FORMATS.find(f => f.id === id);
+      const pick = el.querySelector(".pick");
+      pick.setAttribute("aria-pressed", String(video.wanted === id));
+      pick.setAttribute("aria-busy", String(video.wanted === id && activeFormat !== id));
+      pick.setAttribute("aria-label", `${fmt.codec} ${fmt.abr} kbps, ${activeFormat === id ? "playing" : video.wanted === id ? "loading" : "select audio"}`);
       el.querySelector(".pick").disabled = !!video.formats && !video.formats.has(id);
       const fraction = track ? (track.done ? 1 : track.total ? track.received / track.total : 0) : 0;
       el.querySelector(".fill").style.strokeDashoffset = 100 - fraction * 100;
       el.querySelector(".pos").setAttribute("transform", `rotate(${pos * 360} 18 18)`);
-      el.querySelector(".size").textContent = track?.done ? fmtSize(track.received) : track ? `${Math.round(fraction * 100)} %` : "";
+      el.querySelector(".size").textContent = track?.done ? fmtSize(track.received) : track ? track.total ? `${Math.round(fraction * 100)} %` : "Downloading…" : "";
+      if (video.wanted === id && activeFormat !== id) el.querySelector(".size").textContent += " · Loading audio";
       const a = el.querySelector(".download");
       a.hidden = !track?.done;
       if (track?.done) { a.href = track.blobUrl; a.download = `${video.title ?? video.id} ${track.fmt.abr} kbps.${track.fmt.ext}`; }

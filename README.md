@@ -41,10 +41,26 @@ start fetching the corresponding audio track using [yt-dlp]. Download progress
 is shown in a circular progress indicator for each format. The progress
 indicator also shows the current video playback position.
 
-The fetched audio file is incrementally cached on the frontend. Once fetching
-has progressed beyond the playback position, the sound playback of the preview
-video is switched to that of the cached audio, and a visual indicator is updated
-to show which format is currently playing.
+The fetched audio file is incrementally cached on the frontend. Attachment starts early when MediaSource supports the format. Downloaded byte
+fraction never determines playback readiness. The original sound continues until
+decoded buffered timestamps cover the requested position with 250 ms of audio at
+the selected speed and the replacement's play request succeeds. Near the end of
+a complete file, the required buffer ends at the audio duration.
+
+Pausing, seeking outside the buffer or waiting for decoded data restores the
+original sound. Playback rate and volume follow the YouTube player every 250 ms.
+The player's mute setting at attachment is preserved for both replacement and
+restored original sound. The iframe is internally muted during comparison, so
+set your desired mute state before selecting a track. Change its volume or pause
+at any time. Switching formats restores the original while the next track loads.
+Short overlap or gaps remain possible; seamless synchronization has not been
+observed or claimed.
+
+Without supported MediaSource, a completed Blob must decode and buffer before
+activation. Playback errors clear selection and show retry instructions.
+Completed files remain downloadable even if this browser cannot decode them.
+Selecting a completed file again retries through Blob playback. Incomplete
+failed tracks are discarded and can be fetched again.
 
 Once caching has completed, also the file size is displayed and the download
 button enabled. A fully fetched audio file is also fully cached on the frontend

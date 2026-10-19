@@ -38,15 +38,19 @@ function setup({ script = false, mse = false } = {}) {
   const requests = [], players = [], sources = [], timers = new Map();
   let tick, serial = 0;
   const audio = get("audio");
-  audio.currentTime = 0; audio.paused = true;
+  audio.currentTime = 0; audio.paused = true; audio.readyState = 0; audio.duration = 100;
+  audio.buffered = { length: 0 };
   audio.pause = () => { audio.paused = true; };
   audio.play = () => { audio.paused = false; return Promise.resolve(); };
   class Player {
     constructor(id, options) { this.options = options; this.loads = []; this.muted = false; players.push(this); }
     loadVideoById(id) { this.loads.push(id); }
     getDuration() { return 100; }
-    getCurrentTime() { return 0; }
-    getPlayerState() { return 1; }
+    getCurrentTime() { return this.time ?? 0; }
+    getPlaybackRate() { return this.rate ?? 1; }
+    getVolume() { return this.volume ?? 100; }
+    isMuted() { return this.muted; }
+    getPlayerState() { return this.state ?? 1; }
     mute() { this.muted = true; }
     unMute() { this.muted = false; }
     destroy() { this.destroyed = true; }
@@ -74,9 +78,9 @@ function setup({ script = false, mse = false } = {}) {
   const column = fmt => get("formats").children[YOUTUBE_AUDIO_FORMATS.indexOf(fmt)];
   const click = fmt => column(fmt).querySelector(".pick").emit("click");
   const preview = async (id = A) => { const pending = submit(id); await flush(); players.at(-1).ready(); await pending; };
-  const stream = request => {
+  const stream = (request, length = "10") => {
     const reads = [];
-    request.resolve({ ok: true, headers: new Headers({ "Content-Length": "10" }),
+    request.resolve({ ok: true, headers: new Headers(length === null ? {} : { "Content-Length": length }),
       body: { getReader: () => ({ read: () => { const next = deferred(); reads.push(next); return next.promise; }, cancel: async () => {} }) } });
     return reads;
   };
@@ -88,7 +92,12 @@ function setup({ script = false, mse = false } = {}) {
     reads[0].resolve({ value: new Uint8Array(5), done: false }); await flush();
     return reads;
   };
-  return { get, requests, players, sources, timers, audio, window, document, installAPI, submit, preview, click, column, stream, loadTrack, tick: () => tick() };
+  const playable = async (start = 0, end = 100) => {
+    audio.readyState = 3;
+    audio.buffered = { length: 1, start: () => start, end: () => end };
+    tick(); await flush();
+  };
+  return { playable, get, requests, players, sources, timers, audio, window, document, installAPI, submit, preview, click, column, stream, loadTrack, tick: () => tick() };
 }
 
 test("metadata failure clears the shared request and a later click retries", async () => {
@@ -160,6 +169,7 @@ test("player timeout is visible, and callbacks from the destroyed player are ign
 test("a failed active stream restores original sound and the same format can be fetched again", async () => {
   const h = setup({ mse: true }); await h.preview();
   const reads = await h.loadTrack();
+  await h.playable();
   assert.equal(h.players[0].muted, true);
   reads[1].reject(new Error("stream interrupted")); await flush();
   assert.equal(h.players[0].muted, false);
@@ -170,6 +180,7 @@ test("a failed active stream restores original sound and the same format can be 
   assert.equal(h.requests.length, 3);
   const retryReads = h.stream(h.requests[2]); await flush();
   retryReads[0].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  await h.playable();
   assert.equal(h.players[0].muted, true);
 });
 
@@ -187,7 +198,7 @@ test("retired MediaSource, source-buffer, audio-error and play-rejection callbac
   await h.loadTrack();
   const oldSource = h.sources[0]; oldSource.emit("sourceopen");
   const oldAudioError = h.audio.onerror, play = deferred();
-  h.audio.paused = true; h.audio.play = () => play.promise; h.tick();
+  h.audio.paused = true; h.audio.play = () => play.promise; await h.playable(); h.tick();
   await h.submit(B);
   h.audio.play = () => { h.audio.paused = false; return Promise.resolve(); };
   await h.loadTrack();
@@ -195,6 +206,7 @@ test("retired MediaSource, source-buffer, audio-error and play-rejection callbac
   oldSource.emit("sourceopen"); oldSource.buffer.emit("updateend"); oldSource.buffer.emit("error"); oldAudioError();
   play.reject(new Error("old play")); await flush();
   assert.equal(h.audio.src, src);
+  await h.playable();
   assert.equal(h.players[0].muted, true);
   assert.equal(h.get("video-error").value, "");
 });
@@ -208,10 +220,11 @@ test("audio playback and buffer errors clear activation and permit retry", async
       h.sources[0].emit("sourceopen");
     }
     if (failure === "buffer") { h.sources[0].emit("sourceopen"); h.sources[0].buffer.emit("error"); }
-    if (failure === "play") { h.audio.paused = true; h.audio.play = () => Promise.reject(new Error("blocked")); h.tick(); await flush(); }
+    if (failure === "play") { await h.playable(); h.audio.paused = true; h.audio.play = () => Promise.reject(new Error("blocked")); h.tick(); await flush(); }
     assert.equal(h.players[0].muted, false, failure);
     assert.equal(h.column(F).classes.has("active"), false, failure);
     assert.match(h.get("video-error").value, /retry/);
+    h.audio.readyState = 0;
     await h.click(F);
     // A late failure from the discarded stream must not delete its replacement request.
     reads[1].reject(new Error("discarded stream")); await flush();
@@ -224,6 +237,8 @@ test("without MediaSource the original sound continues until the complete blob c
   assert.equal(h.players[0].muted, false);
   reads[1].resolve({ value: new Uint8Array(5), done: false }); await flush();
   reads[2].resolve({ done: true }); await flush();
+  assert.equal(h.players[0].muted, false);
+  await h.playable();
   assert.equal(h.players[0].muted, true);
   assert.match(h.audio.src, /^blob:/);
 });
@@ -275,4 +290,105 @@ test("short and oversized audio never enable downloads and permit retry", async 
     await h.click(F);
     assert.equal(h.requests.length, 3);
   }
+});
+
+test("bytes and delayed sourceopen cannot activate audio before decode and play resolution", async () => {
+  const h = setup({ mse: true }); await h.preview(); await h.loadTrack();
+  assert.equal(h.players[0].muted, false);
+  h.sources[0].emit("sourceopen");
+  assert.equal(h.players[0].muted, false);
+  const play = deferred();
+  h.audio.play = () => { h.audio.paused = false; return play.promise; };
+  await h.playable();
+  assert.equal(h.players[0].muted, false);
+  play.resolve(); await flush();
+  assert.equal(h.players[0].muted, true);
+});
+
+test("unknown transfer length can stream using buffered timestamps alone", async () => {
+  const h = setup({ mse: true }); await h.preview();
+  const pending = h.click(F); h.requests[0].resolve(metadata()); await pending;
+  const reads = h.stream(h.requests[1], null); await flush();
+  reads[0].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  assert.equal(h.players[0].muted, false);
+  assert.match(h.column(F).querySelector(".size").textContent, /Downloading/);
+  await h.playable(0, 2);
+  assert.equal(h.players[0].muted, true);
+  assert.equal(h.column(F).querySelector(".download").hidden, true);
+});
+
+test("pause, resume, seeks outside buffered ranges, speed and volume preserve original sound", async () => {
+  const h = setup({ mse: true }); await h.preview(); await h.loadTrack();
+  const p = h.players[0]; p.rate = 2; p.volume = 35;
+  await h.playable(0, 5);
+  assert.equal(h.audio.playbackRate, 2); assert.equal(h.audio.volume, 0.35);
+  p.state = 2; h.tick();
+  assert.equal(h.audio.paused, true); assert.equal(p.muted, false);
+  p.state = 1; h.tick(); await flush(); assert.equal(p.muted, true);
+  p.time = 30; h.tick();
+  assert.equal(p.muted, false); assert.equal(h.audio.currentTime, 30);
+  await h.playable(30, 40); assert.equal(p.muted, true);
+  p.time = 10; h.tick(); assert.equal(p.muted, false);
+  await h.playable(10, 20); assert.equal(p.muted, true);
+  h.audio.readyState = 2; h.audio.onwaiting(); assert.equal(p.muted, false);
+});
+
+test("selection during transfer retires delayed sourceopen and completed Blob waits for readiness", async () => {
+  const h = setup({ mse: true }); await h.preview(); await h.loadTrack();
+  const retired = h.sources[0];
+  await h.click(G);
+  retired.addSourceBuffer = () => { throw new Error("must not open"); };
+  retired.emit("sourceopen");
+  assert.equal(h.players[0].muted, false);
+  const reads = h.stream(h.requests.at(-1)); await flush();
+  reads[0].resolve({ value: new Uint8Array(10), done: false }); await flush();
+  reads[1].resolve({ done: true }); await flush();
+  await h.click(F); await h.click(G);
+  assert.equal(h.players[0].muted, false);
+  await h.playable(); assert.equal(h.players[0].muted, true);
+  assert.equal(h.column(G).querySelector(".pick")["aria-pressed"], "true");
+  assert.equal(h.column(G).querySelector(".pick")["aria-busy"], "false");
+});
+
+test("original mute is preserved, and failed completed media remains download-only", async () => {
+  const h = setup(); await h.preview(); h.players[0].muted = true;
+  const reads = await h.loadTrack();
+  reads[1].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  reads[2].resolve({ done: true }); await flush();
+  await h.playable(); assert.equal(h.audio.muted, true);
+  h.audio.onerror();
+  assert.equal(h.players[0].muted, true);
+  assert.equal(h.column(F).querySelector(".download").hidden, false);
+  assert.equal(h.column(F).querySelector(".pick")["aria-pressed"], "false");
+  assert.match(h.get("video-error").value, /download/);
+});
+
+test("synchronous append failure is visible and restores the original", async () => {
+  const h = setup({ mse: true }); await h.preview(); await h.loadTrack();
+  const ms = h.sources[0];
+  ms.addSourceBuffer = () => ({ appendBuffer() { throw new Error("append failed"); }, addEventListener() {} });
+  ms.emit("sourceopen");
+  assert.equal(h.players[0].muted, false);
+  assert.match(h.get("video-error").value, /append failed/);
+});
+
+test("unsupported streaming MIME waits for a decoded complete Blob", async () => {
+  const h = setup({ mse: true }); h.window.MediaSource.isTypeSupported = () => false;
+  await h.preview(); const reads = await h.loadTrack();
+  assert.equal(h.sources.length, 0); assert.equal(h.audio.src, "");
+  reads[1].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  reads[2].resolve({ done: true }); await flush();
+  assert.equal(h.players[0].muted, false);
+  await h.playable(); assert.equal(h.players[0].muted, true);
+});
+
+test("pause while play is pending cannot activate from the late resolution", async () => {
+  const h = setup({ mse: true }); await h.preview(); await h.loadTrack();
+  const play = deferred();
+  h.audio.play = () => { h.audio.paused = false; return play.promise; };
+  await h.playable();
+  h.players[0].state = 2; h.tick();
+  play.resolve(); await flush();
+  assert.equal(h.players[0].muted, false);
+  assert.equal(h.column(F).classes.has("active"), false);
 });
