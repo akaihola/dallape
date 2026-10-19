@@ -163,7 +163,9 @@ same time.
 
 3. Merge and deploy (typically by last steps of a task workflow)
 
-- Merge the rebased branch on `main`, and remove the worktree and branch.
+- Merge the rebased branch on `main`.
+- Keep the worktree and branch after merging. Remove them only when the user
+  explicitly requests it.
 - Move the issue from `## In Progress` to `## Completed / Accepted` in TASKS.md with `[ ]`,
   pending user acceptance, and commit.
 - Do any deployment steps if defined in the general development worklow.
