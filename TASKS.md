@@ -24,11 +24,6 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
-- [6] Validate audio stream bytes and failure recovery
-    - Depends on: [4]
-
-  <!-- hai:{"id":"simple-8e0f78ba-f8d0-493a-a5aa-a70cbcb622ab","labels":["steward"],"createdAt":"2026-10-19T11:15:25.358Z","updatedAt":"2026-10-19T14:10:07.775Z"} -->
-
 - [5] Activate replacement audio only when it can play
     - Depends on: [4]
 
@@ -40,6 +35,11 @@ Rules for TASKS.md usage are at the bottom of the file.
   <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-19T14:10:08.053Z"} -->
 
 ## Scheduled
+
+- [6] Validate audio stream bytes and failure recovery
+    - Depends on: [4]
+
+  <!-- hai:{"id":"simple-8e0f78ba-f8d0-493a-a5aa-a70cbcb622ab","labels":["steward"],"createdAt":"2026-10-19T11:15:25.358Z","updatedAt":"2026-10-19T14:23:08.609Z"} -->
 
 ## In Progress
 
