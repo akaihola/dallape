@@ -146,3 +146,37 @@ sets `PORT` or maps port 8080.
 [dallape.vempai.men]: https://dallape.vempai.men
 [yt-dlp]: https://github.com/yt-dlp/yt-dlp
 [deployment task]: docs/tasks/1-scaleway-deployment.md
+
+### Audio API contract
+
+`GET /api/formats?url=…` accepts a YouTube URL or an 11-character video ID.
+`GET /api/audio?url=…&format=…` accepts the same input plus an audio-only
+`format_id` returned by the formats endpoint. Both parameters remain query
+parameters. Invalid input returns 400, missing parameters return 422, an
+unavailable audio format returns 404, and extraction or initial upstream audio
+failure returns 502 with a generic error detail. Credentials, malformed ports
+and unsupported URL authorities are rejected.
+
+The audio endpoint returns 200 with an attachment filename and audio media type.
+An exact yt-dlp filesize, when available, supplies Content-Length; approximate
+sizes are not used as byte counts. Upstream status, Content-Range, Content-Length
+and actual response lengths are checked. A server ignoring a requested range is
+rejected. There are no automatic stream retries. A failed format can be fetched
+again by clicking it, starting a new request from the beginning.
+
+The backend reads ahead before sending success headers. Failures detected after
+headers terminate the HTTP response without completing its framing. Clients must
+discard partial files, including streams with unknown length; an HTTP 200 alone
+is not proof of completion. The browser enables downloading only after clean EOF
+and a match with any known Content-Length. The backend holds the final block of
+each upstream response until its length is verified, closes upstream handles on
+failure or disconnect, and suppresses upstream exception details in errors and
+tracebacks. Socket inactivity timeout is 10 seconds; the 840-second stream budget
+is checked before and after each blocking read. Cleanup waits for an active read
+to return or time out. This is not a hard wall-clock deadline for a peer that
+continually trickles bytes within one read.
+
+Client Range requests are not forwarded. The endpoint promises neither partial
+responses nor client resume support. Unknown-size streams use one upstream
+request and rely on clean upstream EOF and HTTP framing, rather than an
+independently known total size.

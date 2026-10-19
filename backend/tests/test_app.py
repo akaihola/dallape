@@ -81,7 +81,7 @@ def test_audio_unknown_format(canned, fmt):
 
 
 def test_audio_streams(canned, monkeypatch):
-    monkeypatch.setattr(backend, "read_chunks", lambda fmt: iter([b"ab", b"cde"]))
+    monkeypatch.setattr(backend, "read_chunks", lambda fmt: (data for data in [b"ab", b"cde"]))
     r = client.get("/api/audio", params={"url": VIDEO_ID, "format": "251"})
     assert r.status_code == 200
     assert r.content == b"abcde"
@@ -96,8 +96,36 @@ def test_read_chunks_uses_ranges(monkeypatch):
     def fake_urlopen(self, req):
         ranges.append(req.headers["Range"])
         start, end = map(int, req.headers["Range"][6:].split("-"))
-        return io.BytesIO(b"abcde"[start:end + 1])
+        return Upstream(b"abcde"[start:end + 1], 206, {"Content-Range": f"bytes {start}-{end}/5"})
 
     monkeypatch.setattr(backend.YoutubeDL, "urlopen", fake_urlopen)
     assert b"".join(backend.read_chunks(INFO["formats"][2])) == b"abcde"
     assert ranges == ["bytes=0-1", "bytes=2-3", "bytes=4-4"]
+
+
+class Upstream(io.BytesIO):
+    def __init__(self, data=b"abcde", status=200, headers=None, fail=False):
+        super().__init__(data)
+        self.status = status
+        self.headers = headers or {}
+        self.fail = fail
+
+    def read(self, size):
+        if self.fail:
+            raise OSError("secret signed URL and cookie")
+        return super().read(size)
+
+
+@pytest.mark.parametrize("text", [
+    "https://[youtube.com/watch?v=" + VIDEO_ID,
+    "https://youtube.com:bad/watch?v=" + VIDEO_ID,
+    "https://youtube.com:99999/watch?v=" + VIDEO_ID,
+    "https://user:password@youtube.com/watch?v=" + VIDEO_ID,
+    "https://youtube.com:123/watch?v=" + VIDEO_ID,
+    "ftp://youtube.com/watch?v=" + VIDEO_ID,
+    "https://youtube.com＠evil.example/watch?v=" + VIDEO_ID,
+])
+def test_malformed_authority_parity(text):
+    assert backend.parse_youtube(text) is None
+    for endpoint in ("formats", "audio"):
+        assert client.get(f"/api/{endpoint}", params={"url": text, "format": "140"}).status_code == 400

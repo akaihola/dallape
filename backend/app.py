@@ -3,7 +3,10 @@
 import os
 import re
 from pathlib import Path
+from time import monotonic
 from urllib.parse import parse_qs, quote, urlparse
+
+import anyio
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +20,8 @@ VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"}
 PATH_PREFIXES = ("/shorts/", "/embed/", "/live/", "/v/")
 READ_SIZE = 64 * 1024
+SOCKET_TIMEOUT = 10
+STREAM_DEADLINE = 840
 
 
 def parse_youtube(text: str) -> str | None:
@@ -24,7 +29,13 @@ def parse_youtube(text: str) -> str | None:
     text = text.strip()
     if VIDEO_ID_RE.match(text):
         return text
-    u = urlparse(text if "://" in text else "https://" + text)
+    try:
+        u = urlparse(text if "://" in text else "https://" + text)
+        port = u.port
+    except ValueError:
+        return None
+    if u.scheme not in {"http", "https"} or u.username or u.password or port not in (None, 80, 443):
+        return None
     if u.hostname not in HOSTS:
         return None
     if u.hostname == "youtu.be":
@@ -74,24 +85,93 @@ def audio_formats(info: dict) -> list[dict]:
     ]
 
 
+class AudioStreamError(RuntimeError):
+    """Public, credential-free upstream failure."""
+
+
 def read_chunks(fmt: dict):
-    """Yield the audio bytes, using ranged requests when yt-dlp advises a chunk size."""
+    """Validate each upstream response; never retry an unverified offset."""
     headers = dict(fmt.get("http_headers") or {})
+    headers["Accept-Encoding"] = "identity"
     chunk = (fmt.get("downloader_options") or {}).get("http_chunk_size")
     size = fmt.get("filesize")
-    with YoutubeDL(ydl_opts()) as ydl:
-        if not chunk or not size:
-            with ydl.urlopen(Request(fmt["url"], headers=headers)) as r:
-                while data := r.read(READ_SIZE):
-                    yield data
-            return
-        start = 0
-        while start < size:
-            end = min(start + chunk, size) - 1
-            with ydl.urlopen(Request(fmt["url"], headers=headers | {"Range": f"bytes={start}-{end}"})) as r:
-                while data := r.read(READ_SIZE):
-                    yield data
-            start = end + 1
+    deadline = monotonic() + STREAM_DEADLINE
+    try:
+        with YoutubeDL(ydl_opts() | {"socket_timeout": SOCKET_TIMEOUT}) as ydl:
+            start = 0
+            while True:
+                if monotonic() >= deadline:
+                    raise AudioStreamError("audio stream deadline exceeded")
+                ranged = bool(chunk and size)
+                end = min(start + chunk, size) - 1 if ranged else None
+                request_headers = headers | ({"Range": f"bytes={start}-{end}"} if ranged else {})
+                with ydl.urlopen(Request(fmt["url"], headers=request_headers)) as response:
+                    expected = end - start + 1 if ranged else size
+                    if response.status != (206 if ranged else 200):
+                        raise AudioStreamError("unexpected upstream status")
+                    if response.headers.get("Content-Encoding", "identity").lower() != "identity":
+                        raise AudioStreamError("unexpected upstream encoding")
+                    if ranged:
+                        if response.headers.get("Content-Range") != f"bytes {start}-{end}/{size}":
+                            raise AudioStreamError("invalid upstream content range")
+                    length = response.headers.get("Content-Length")
+                    if length is not None:
+                        length = int(length)
+                        if length < 0 or (expected is not None and expected != length):
+                            raise AudioStreamError("invalid upstream content length")
+                        expected = length
+                    received = 0
+                    pending = b""
+                    while True:
+                        if monotonic() >= deadline:
+                            raise AudioStreamError("audio stream deadline exceeded")
+                        data = response.read(READ_SIZE if expected is None else min(READ_SIZE, expected - received + 1))
+                        if monotonic() >= deadline:
+                            raise AudioStreamError("audio stream deadline exceeded")
+                        received += len(data)
+                        if expected is not None and received > expected:
+                            raise AudioStreamError("oversized upstream response")
+                        if not data:
+                            if expected is not None and received != expected:
+                                raise AudioStreamError("short upstream response")
+                            if pending:
+                                yield pending
+                            break
+                        # Hold the final block until EOF verifies the response length.
+                        if pending:
+                            yield pending
+                        pending = data
+                if not ranged or end + 1 == size:
+                    return
+                start += received
+    except Exception:
+        # Do not chain networking errors: signed URLs and cookies may be in them.
+        raise AudioStreamError("upstream audio stream failed") from None
+
+
+class AudioResponse(StreamingResponse):
+    def __init__(self, chunks, first, **kwargs):
+        self.chunks = chunks
+
+        async def body():
+            if first:
+                yield first
+            sentinel = object()
+            while True:
+                data = await anyio.to_thread.run_sync(lambda: next(chunks, sentinel))
+                if data is sentinel:
+                    break
+                yield data
+
+        super().__init__(body(), **kwargs)
+
+    async def __call__(self, scope, receive, send):
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            # A cancelled consumer must still release the generator's upstream handle.
+            with anyio.CancelScope(shield=True):
+                await anyio.to_thread.run_sync(self.chunks.close)
 
 
 app = FastAPI(title="Dallapé API")
@@ -109,8 +189,8 @@ def video_info(url: str) -> dict:
         raise HTTPException(400, "not a YouTube URL or video id")
     try:
         return extract(video_id)
-    except DownloadError as e:
-        raise HTTPException(502, str(e)) from e
+    except DownloadError:
+        raise HTTPException(502, "video extraction failed") from None
 
 
 @app.get("/api/health")
@@ -140,7 +220,13 @@ def audio(url: str, format: str):
     headers = {"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
     if fmt.get("filesize"):
         headers["Content-Length"] = str(fmt["filesize"])
-    return StreamingResponse(read_chunks(fmt), media_type=mime_for(fmt).split(";")[0], headers=headers)
+    chunks = read_chunks(fmt)
+    try:
+        first = next(chunks, b"")
+    except AudioStreamError:
+        chunks.close()
+        raise HTTPException(502, "upstream audio stream failed") from None
+    return AudioResponse(chunks, first, media_type=mime_for(fmt).split(";")[0], headers=headers)
 
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"

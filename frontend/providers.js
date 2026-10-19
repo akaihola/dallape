@@ -28,6 +28,7 @@ export function parseVideo(text) {
   } catch {
     return null;
   }
+  if (!["http:", "https:"].includes(u.protocol) || u.username || u.password || !["", "80", "443"].includes(u.port)) return null;
   if (!YOUTUBE_HOSTS.has(u.hostname)) return null;
   let id = "";
   if (u.hostname === "youtu.be") id = u.pathname.split("/")[1] ?? "";

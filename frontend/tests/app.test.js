@@ -222,7 +222,8 @@ test("audio playback and buffer errors clear activation and permit retry", async
 test("without MediaSource the original sound continues until the complete blob can attach", async () => {
   const h = setup(); await h.preview(); const reads = await h.loadTrack();
   assert.equal(h.players[0].muted, false);
-  reads[1].resolve({ done: true }); await flush();
+  reads[1].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  reads[2].resolve({ done: true }); await flush();
   assert.equal(h.players[0].muted, true);
   assert.match(h.audio.src, /^blob:/);
 });
@@ -260,4 +261,18 @@ test("old audio response, chunks and completion cannot mute or attach to the new
   assert.equal(h.players[0].muted, false);
   assert.equal(h.audio.src, "");
   assert.equal(h.column(F).classes.has("active"), false);
+});
+
+
+test("short and oversized audio never enable downloads and permit retry", async () => {
+  for (const oversized of [false, true]) {
+    const h = setup(); await h.preview(); const reads = await h.loadTrack();
+    reads[1].resolve(oversized ? { value: new Uint8Array(6), done: false } : { done: true });
+    await flush();
+    assert.equal(h.column(F).querySelector(".download").hidden, true);
+    assert.equal(h.players[0].muted, false);
+    assert.match(h.get("video-error").value, /length mismatch.*retry/);
+    await h.click(F);
+    assert.equal(h.requests.length, 3);
+  }
 });

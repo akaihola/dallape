@@ -31,3 +31,16 @@ test("format table has unique ids and MSE mime strings", () => {
   assert.equal(new Set(ids).size, ids.length);
   for (const f of YOUTUBE_AUDIO_FORMATS) assert.match(f.mime, /^audio\/(mp4|webm); codecs="/);
 });
+
+
+test("malformed authority parity with backend fixtures", () => {
+  for (const text of [
+    `https://[youtube.com/watch?v=${ID}`,
+    `https://youtube.com:bad/watch?v=${ID}`,
+    `https://youtube.com:99999/watch?v=${ID}`,
+    `https://user:password@youtube.com/watch?v=${ID}`,
+    `https://youtube.com:123/watch?v=${ID}`,
+    `ftp://youtube.com/watch?v=${ID}`,
+    `https://youtube.com＠evil.example/watch?v=${ID}`,
+  ]) assert.equal(parseVideo(text), null, text);
+});

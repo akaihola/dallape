@@ -176,17 +176,24 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
       const res = await api("/api/audio", { url: v.id, format: fmt.id });
       if (!res.ok) throw new Error((await res.json()).detail ?? res.statusText);
       if (v.tracks.get(fmt.id) !== track) { await res.body?.cancel(); return; }
-      track.total = Number(res.headers.get("Content-Length")) || 0;
+      const length = res.headers.get("Content-Length");
+      const expected = length === null ? null : Number(length);
+      if (expected !== null && (!Number.isSafeInteger(expected) || expected < 0)) throw new Error("Invalid audio length");
+      track.total = expected ?? 0;
       const reader = res.body.getReader();
-      for (;;) {
-        const { value, done } = await reader.read();
-        if (v.tracks.get(fmt.id) !== track) { await reader.cancel(); return; }
-        if (done) break;
-        track.chunks.push(value);
-        track.received += value.length;
-        track.append?.(value);
-        if (request === submission) { render(); maybeSwitch(v); }
-      }
+      try {
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (v.tracks.get(fmt.id) !== track) return;
+          if (done) break;
+          if (expected !== null && track.received + value.length > expected) throw new Error("Audio length mismatch");
+          track.chunks.push(value);
+          track.received += value.length;
+          track.append?.(value);
+          if (request === submission) { render(); maybeSwitch(v); }
+        }
+        if (expected !== null && track.received !== expected) throw new Error("Audio length mismatch");
+      } finally { await reader.cancel(); }
       track.done = true;
       track.total = track.received;
       track.blobUrl = URL.createObjectURL(new Blob(track.chunks, { type: fmt.mime.split(";")[0] }));
