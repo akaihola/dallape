@@ -9,11 +9,6 @@ Rules for TASKS.md usage are at the bottom of the file.
 
   <!-- hai:{"id":"simple-3843159a-e875-4f62-b0ce-57547499e312","labels":["steward"],"createdAt":"2026-10-19T11:15:26.828Z","updatedAt":"2026-10-19T11:15:26.828Z"} -->
 
-- [10] Use backend format metadata for playback and downloads
-    - Depends on: [5]
-
-  <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-19T11:15:26.542Z"} -->
-
 - [9] Bound browser audio retention and clean retired tracks
     - Depends on: [4], [5]
 
@@ -27,20 +22,25 @@ Rules for TASKS.md usage are at the bottom of the file.
 - [7] Verify a reproducible YouTube-capable release image
   <!-- hai:{"id":"simple-780b4cb2-dcde-49ed-b332-27058aaa9e22","labels":["steward"],"createdAt":"2026-10-19T11:15:25.662Z","updatedAt":"2026-10-19T11:15:25.662Z"} -->
 
+## Ordered backlog
+
+- [4] Fix audio request ownership and retry recovery
+  <!-- hai:{"id":"simple-b2093cf7-c9ea-4453-80cb-a8ecd7453b3f","labels":["steward"],"createdAt":"2026-10-19T11:15:24.739Z","updatedAt":"2026-10-19T14:10:07.185Z"} -->
+
 - [6] Validate audio stream bytes and failure recovery
     - Depends on: [4]
 
-  <!-- hai:{"id":"simple-8e0f78ba-f8d0-493a-a5aa-a70cbcb622ab","labels":["steward"],"createdAt":"2026-10-19T11:15:25.358Z","updatedAt":"2026-10-19T11:15:25.358Z"} -->
+  <!-- hai:{"id":"simple-8e0f78ba-f8d0-493a-a5aa-a70cbcb622ab","labels":["steward"],"createdAt":"2026-10-19T11:15:25.358Z","updatedAt":"2026-10-19T14:10:07.775Z"} -->
 
 - [5] Activate replacement audio only when it can play
     - Depends on: [4]
 
-  <!-- hai:{"id":"simple-07d103ef-891b-4179-8e54-1b81a6cb7c3d","labels":["steward"],"createdAt":"2026-10-19T11:15:25.075Z","updatedAt":"2026-10-19T11:15:25.075Z"} -->
+  <!-- hai:{"id":"simple-07d103ef-891b-4179-8e54-1b81a6cb7c3d","labels":["steward"],"createdAt":"2026-10-19T11:15:25.075Z","updatedAt":"2026-10-19T14:10:07.506Z"} -->
 
-- [4] Fix audio request ownership and retry recovery
-  <!-- hai:{"id":"simple-b2093cf7-c9ea-4453-80cb-a8ecd7453b3f","labels":["steward"],"createdAt":"2026-10-19T11:15:24.739Z","updatedAt":"2026-10-19T11:15:24.739Z"} -->
+- [10] Use backend format metadata for playback and downloads
+    - Depends on: [5]
 
-## Ordered backlog
+  <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-19T14:10:08.053Z"} -->
 
 ## Scheduled
 
