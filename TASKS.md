@@ -36,12 +36,12 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Scheduled
 
-- [6] Validate audio stream bytes and failure recovery
+## In Progress
+
+- [~] [6] Validate audio stream bytes and failure recovery
     - Depends on: [4]
 
-  <!-- hai:{"id":"simple-8e0f78ba-f8d0-493a-a5aa-a70cbcb622ab","labels":["steward"],"createdAt":"2026-10-19T11:15:25.358Z","updatedAt":"2026-10-19T14:23:08.609Z"} -->
-
-## In Progress
+      <!-- hai:{"id":"simple-8e0f78ba-f8d0-493a-a5aa-a70cbcb622ab","labels":["steward"],"createdAt":"2026-10-19T11:15:25.358Z","updatedAt":"2026-10-19T14:23:21.071Z"} -->
 
 - [*] Scanners found the hostname within two minutes of the certificate being issued,
   and each probe wakes the container. That costs little, but it means fewer true cold
