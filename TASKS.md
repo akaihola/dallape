@@ -9,11 +9,6 @@ Rules for TASKS.md usage are at the bottom of the file.
 
   <!-- hai:{"id":"simple-3843159a-e875-4f62-b0ce-57547499e312","labels":["steward"],"createdAt":"2026-10-19T11:15:26.828Z","updatedAt":"2026-10-19T11:15:26.828Z"} -->
 
-- [9] Bound browser audio retention and clean retired tracks
-    - Depends on: [4], [5]
-
-  <!-- hai:{"id":"simple-6f6789e7-3748-490c-97d8-cdb26ac151fc","labels":["steward"],"createdAt":"2026-10-19T11:15:26.218Z","updatedAt":"2026-10-19T11:15:26.218Z"} -->
-
 - [8] Bound public audio work and decide safe cookie policy
     - Depends on: [6], [7]
 
@@ -23,6 +18,11 @@ Rules for TASKS.md usage are at the bottom of the file.
   <!-- hai:{"id":"simple-780b4cb2-dcde-49ed-b332-27058aaa9e22","labels":["steward"],"createdAt":"2026-10-19T11:15:25.662Z","updatedAt":"2026-10-19T11:15:25.662Z"} -->
 
 ## Ordered backlog
+
+- [9] Bound browser audio retention and clean retired tracks
+    - Depends on: [4], [5]
+
+  <!-- hai:{"id":"simple-6f6789e7-3748-490c-97d8-cdb26ac151fc","labels":["steward"],"createdAt":"2026-10-19T11:15:26.218Z","updatedAt":"2026-10-19T17:08:04.081Z"} -->
 
 ## Scheduled
 

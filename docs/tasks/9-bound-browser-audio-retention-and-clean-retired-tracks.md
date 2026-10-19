@@ -17,3 +17,5 @@ Original step 6, F7. All visited videos, chunks and object URLs are still retain
 - Active playback and download URLs stay valid, evicted tracks refetch, and stale callbacks cannot change current audio.
 - Check cleanup through success, error and abort, and supplement ownership assertions with browser memory observation without requiring particular garbage-collector timing.
 - README states that fetch-once applies only while a track remains retained; cleanup policy can be rolled back independently.
+
+Memory (hopeli, steward 2026-10-19): before each browser or test command, wait up to 10 minutes for `MemAvailable` of at least 2 GiB; if it doesn't come, start anyway when at least 1.5 GiB is available. Stop a running check, and record it as unavailable, when `MemAvailable` falls below 1 GiB or swap grows by more than 512 MiB. Run one browser at a time.
