@@ -21,7 +21,18 @@ track needs to be fetched separately from the video server.
 Initially, all audio formats supported by the video provider are displayed in
 the audio format columns. The first click on any audio format will first fetch
 the list of available audio formats for that video from the server, and
-unavailable formats will be disabled visually.
+unavailable formats will be disabled visually. Concurrent clicks share this request.
+If it fails, click a format again to retry. A late response from a previous
+video cannot change the current selection.
+
+If the YouTube script or player fails, an error appears beside the Preview
+button. Submit the same video again to retry. Submissions made while the player
+is starting settle on the latest video once it is ready.
+
+If an audio download or playback fails, the original video's sound resumes and
+the format is no longer marked active. Click that format again to fetch and play
+it again. Browsers without support for streaming that format keep the original
+sound until the complete audio file is available.
 
 ### Caching audio formats
 

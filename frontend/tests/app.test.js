@@ -1,0 +1,263 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { startApp } from "../app.js";
+import { YOUTUBE_AUDIO_FORMATS } from "../providers.js";
+
+const A = "dQw4w9WgXcQ", B = "abcdefghijk";
+const [F, G] = YOUTUBE_AUDIO_FORMATS;
+const deferred = () => {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+};
+const flush = () => new Promise(setImmediate);
+const metadata = () => ({ ok: true, json: async () => ({ title: "Video", formats: [F, G].map(f => ({ format_id: f.id })) }) });
+
+class Element {
+  constructor() {
+    this.children = []; this.listeners = {}; this.parts = new Map(); this.classes = new Set();
+    this.style = {}; this.value = ""; this.hidden = true; this.src = "";
+    this.classList = { toggle: (name, on) => on ? this.classes.add(name) : this.classes.delete(name) };
+  }
+  addEventListener(name, callback) { this.listeners[name] = callback; }
+  emit(name, event = {}) { return this.listeners[name]?.(event); }
+  append(el) { this.children.push(el); }
+  replaceChildren(el) { this.children = [el]; }
+  remove() { this.removed = true; }
+  querySelector(name) {
+    if (!this.parts.has(name)) this.parts.set(name, new Element());
+    return this.parts.get(name);
+  }
+  setAttribute(name, value) { this[name] = value; }
+  removeAttribute(name) { this[name] = ""; }
+}
+
+function setup({ script = false, mse = false } = {}) {
+  const elements = new Map();
+  const get = id => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); };
+  const requests = [], players = [], sources = [], timers = new Map();
+  let tick, serial = 0;
+  const audio = get("audio");
+  audio.currentTime = 0; audio.paused = true;
+  audio.pause = () => { audio.paused = true; };
+  audio.play = () => { audio.paused = false; return Promise.resolve(); };
+  class Player {
+    constructor(id, options) { this.options = options; this.loads = []; this.muted = false; players.push(this); }
+    loadVideoById(id) { this.loads.push(id); }
+    getDuration() { return 100; }
+    getCurrentTime() { return 0; }
+    getPlayerState() { return 1; }
+    mute() { this.muted = true; }
+    unMute() { this.muted = false; }
+    destroy() { this.destroyed = true; }
+    ready() { this.options.events.onReady(); }
+    error() { this.options.events.onError(); }
+  }
+  class MediaSource extends Element {
+    static isTypeSupported() { return true; }
+    constructor() { super(); this.readyState = "open"; this.buffer = new Element(); sources.push(this); }
+    addSourceBuffer() { this.buffer.appendBuffer = () => {}; return this.buffer; }
+    endOfStream() { this.readyState = "ended"; }
+  }
+  const window = {};
+  const installAPI = () => { window.YT = { Player, PlayerState: { PLAYING: 1 } }; };
+  if (!script) installAPI();
+  if (mse) window.MediaSource = MediaSource;
+  const document = { getElementById: get, createElement: () => new Element(), head: new Element() };
+  startApp({ window, document, Blob, URL: { createObjectURL: () => `blob:${++serial}`, revokeObjectURL() {} },
+    fetch: url => { const result = deferred(); requests.push({ url, ...result }); return result.promise; },
+    setInterval: callback => { tick = callback; },
+    setTimeout: callback => { const id = ++serial; timers.set(id, callback); return id; },
+    clearTimeout: id => timers.delete(id),
+  });
+  const submit = id => { get("video-input").value = id; return get("video-form").emit("submit", { preventDefault() {} }); };
+  const column = fmt => get("formats").children[YOUTUBE_AUDIO_FORMATS.indexOf(fmt)];
+  const click = fmt => column(fmt).querySelector(".pick").emit("click");
+  const preview = async (id = A) => { const pending = submit(id); await flush(); players.at(-1).ready(); await pending; };
+  const stream = request => {
+    const reads = [];
+    request.resolve({ ok: true, headers: new Headers({ "Content-Length": "10" }),
+      body: { getReader: () => ({ read: () => { const next = deferred(); reads.push(next); return next.promise; }, cancel: async () => {} }) } });
+    return reads;
+  };
+  const loadTrack = async (fmt = F) => {
+    const pending = click(fmt);
+    if (requests.at(-1).url.includes("/formats")) requests.at(-1).resolve(metadata());
+    await pending;
+    const reads = stream(requests.at(-1)); await flush();
+    reads[0].resolve({ value: new Uint8Array(5), done: false }); await flush();
+    return reads;
+  };
+  return { get, requests, players, sources, timers, audio, window, document, installAPI, submit, preview, click, column, stream, loadTrack, tick: () => tick() };
+}
+
+test("metadata failure clears the shared request and a later click retries", async () => {
+  const h = setup(); await h.preview();
+  const first = h.click(F), concurrent = h.click(G);
+  assert.equal(h.requests.length, 1);
+  h.requests[0].reject(new Error("offline")); await Promise.all([first, concurrent]);
+  assert.match(h.get("video-error").value, /offline.*retry/);
+  const retry = h.click(F), shared = h.click(G);
+  assert.equal(h.requests.length, 2);
+  h.requests[1].resolve(metadata()); await Promise.all([retry, shared]);
+  assert.equal(h.requests.length, 3);
+  assert.match(h.requests[2].url, new RegExp(`format=${G.id}`));
+});
+
+test("a stale metadata body cannot select audio after navigation, including back to the same video", async () => {
+  const h = setup(); await h.preview();
+  const body = deferred(), pick = h.click(F);
+  h.requests[0].resolve({ ok: true, json: () => body.promise }); await flush();
+  await h.submit(B); await h.submit(A);
+  body.resolve(await metadata().json()); await pick;
+  assert.equal(h.requests.length, 1);
+  assert.equal(h.players[0].muted, false);
+  assert.equal(h.get("video-error").value, "");
+});
+
+test("stale metadata errors do not overwrite the new video's error output", async () => {
+  const h = setup(); await h.preview(); const pick = h.click(F);
+  await h.submit(B);
+  h.requests[0].reject(new Error("old failure")); await pick;
+  assert.equal(h.get("video-error").value, "");
+});
+
+test("rapid first submissions share player readiness and load only the latest video", async () => {
+  const h = setup(); const first = h.submit(A); await flush();
+  const latest = h.submit(B); await flush();
+  assert.equal(h.players.length, 1);
+  assert.deepEqual(h.players[0].loads, []);
+  h.players[0].ready(); await Promise.all([first, latest]);
+  assert.deepEqual(h.players[0].loads, [B]);
+});
+
+test("script failure and late callbacks allow same-video submission to retry", async () => {
+  const h = setup({ script: true });
+  const first = h.submit(A), oldReady = h.window.onYouTubeIframeAPIReady;
+  h.document.head.children[0].onerror(); await first;
+  assert.match(h.get("video-error").value, /script.*retry/);
+  const retry = h.submit(A);
+  oldReady(); await flush(); assert.equal(h.players.length, 0);
+  h.installAPI(); h.window.onYouTubeIframeAPIReady(); await flush();
+  h.players[0].ready(); await retry;
+  assert.deepEqual(h.players[0].loads, [A]);
+});
+
+test("player timeout is visible, and callbacks from the destroyed player are ignored", async () => {
+  const h = setup(); const first = h.submit(A); await flush();
+  [...h.timers.values()][0](); await first;
+  assert.match(h.get("video-error").value, /player failed.*retry/);
+  const retry = h.submit(A); await flush();
+  h.players[0].ready(); h.players[0].error();
+  h.players[1].ready(); await retry;
+  assert.deepEqual(h.players[1].loads, [A]);
+  assert.equal(h.get("video-error").value, "");
+  h.players[1].error();
+  assert.match(h.get("video-error").value, /retry/);
+  await h.preview(); assert.equal(h.players.length, 3);
+});
+
+test("a failed active stream restores original sound and the same format can be fetched again", async () => {
+  const h = setup({ mse: true }); await h.preview();
+  const reads = await h.loadTrack();
+  assert.equal(h.players[0].muted, true);
+  reads[1].reject(new Error("stream interrupted")); await flush();
+  assert.equal(h.players[0].muted, false);
+  assert.equal(h.column(F).classes.has("active"), false);
+  assert.equal(h.audio.src, "");
+  assert.match(h.get("video-error").value, /stream interrupted.*retry/);
+  await h.click(F);
+  assert.equal(h.requests.length, 3);
+  const retryReads = h.stream(h.requests[2]); await flush();
+  retryReads[0].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  assert.equal(h.players[0].muted, true);
+});
+
+test("stale stream responses and read failures do not affect the current video", async () => {
+  const h = setup({ mse: true }); await h.preview();
+  const reads = await h.loadTrack(); await h.submit(B);
+  reads[1].reject(new Error("old stream")); await flush();
+  assert.equal(h.get("video-error").value, "");
+  assert.equal(h.players[0].muted, false);
+  assert.equal(h.audio.src, "");
+});
+
+test("retired MediaSource, source-buffer, audio-error and play-rejection callbacks cannot replace current audio", async () => {
+  const h = setup({ mse: true }); await h.preview();
+  await h.loadTrack();
+  const oldSource = h.sources[0]; oldSource.emit("sourceopen");
+  const oldAudioError = h.audio.onerror, play = deferred();
+  h.audio.paused = true; h.audio.play = () => play.promise; h.tick();
+  await h.submit(B);
+  h.audio.play = () => { h.audio.paused = false; return Promise.resolve(); };
+  await h.loadTrack();
+  const src = h.audio.src;
+  oldSource.emit("sourceopen"); oldSource.buffer.emit("updateend"); oldSource.buffer.emit("error"); oldAudioError();
+  play.reject(new Error("old play")); await flush();
+  assert.equal(h.audio.src, src);
+  assert.equal(h.players[0].muted, true);
+  assert.equal(h.get("video-error").value, "");
+});
+
+test("audio playback and buffer errors clear activation and permit retry", async () => {
+  for (const failure of ["audio", "buffer", "sourceopen", "play"]) {
+    const h = setup({ mse: true }); await h.preview(); const reads = await h.loadTrack();
+    if (failure === "audio") h.audio.onerror();
+    if (failure === "sourceopen") {
+      h.sources[0].addSourceBuffer = () => { throw new Error("unsupported buffer"); };
+      h.sources[0].emit("sourceopen");
+    }
+    if (failure === "buffer") { h.sources[0].emit("sourceopen"); h.sources[0].buffer.emit("error"); }
+    if (failure === "play") { h.audio.paused = true; h.audio.play = () => Promise.reject(new Error("blocked")); h.tick(); await flush(); }
+    assert.equal(h.players[0].muted, false, failure);
+    assert.equal(h.column(F).classes.has("active"), false, failure);
+    assert.match(h.get("video-error").value, /retry/);
+    await h.click(F);
+    // A late failure from the discarded stream must not delete its replacement request.
+    reads[1].reject(new Error("discarded stream")); await flush();
+    await h.click(F); assert.equal(h.requests.length, 3, failure);
+  }
+});
+
+test("without MediaSource the original sound continues until the complete blob can attach", async () => {
+  const h = setup(); await h.preview(); const reads = await h.loadTrack();
+  assert.equal(h.players[0].muted, false);
+  reads[1].resolve({ done: true }); await flush();
+  assert.equal(h.players[0].muted, true);
+  assert.match(h.audio.src, /^blob:/);
+});
+
+test("script timeout recovers and submissions before API readiness use the latest video", async () => {
+  const h = setup({ script: true }); const first = h.submit(A);
+  [...h.timers.values()][0](); await first;
+  assert.match(h.get("video-error").value, /script.*retry/);
+  const retry = h.submit(A), latest = h.submit(B);
+  assert.equal(h.document.head.children.length, 2);
+  h.installAPI(); h.window.onYouTubeIframeAPIReady(); await flush();
+  assert.equal(h.players[0].options.videoId, B);
+  h.players[0].ready(); await Promise.all([retry, latest]);
+  assert.deepEqual(h.players[0].loads, [B]);
+});
+
+test("a throwing player constructor clears its timeout and permits retry", async () => {
+  const h = setup(), RealPlayer = h.window.YT.Player;
+  h.window.YT.Player = class { constructor() { throw new Error("constructor failed"); } };
+  await h.submit(A);
+  assert.equal(h.timers.size, 0);
+  assert.match(h.get("video-error").value, /constructor failed.*retry/);
+  h.window.YT.Player = RealPlayer;
+  await h.preview(); assert.deepEqual(h.players[0].loads, [A]);
+});
+
+test("old audio response, chunks and completion cannot mute or attach to the new video", async () => {
+  const h = setup({ mse: true }); await h.preview();
+  const pending = h.click(F); h.requests[0].resolve(metadata()); await pending;
+  await h.submit(B);
+  const reads = h.stream(h.requests[1]); await flush();
+  reads[0].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  reads[1].resolve({ done: true }); await flush();
+  h.tick();
+  assert.equal(h.players[0].muted, false);
+  assert.equal(h.audio.src, "");
+  assert.equal(h.column(F).classes.has("active"), false);
+});
