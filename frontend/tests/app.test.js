@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { startApp } from "../app.js";
 import { YOUTUBE_AUDIO_FORMATS } from "../providers.js";
 
@@ -11,7 +12,7 @@ const deferred = () => {
   return { promise, resolve, reject };
 };
 const flush = () => new Promise(setImmediate);
-const metadata = () => ({ ok: true, json: async () => ({ title: "Video", formats: [F, G].map(f => ({ format_id: f.id })) }) });
+const metadata = () => ({ ok: true, json: async () => ({ title: "Video", formats: [F, G].map(f => ({ format_id: f.id, ext: f.ext, acodec: f.codec, abr: f.abr, mime: f.mime })) }) });
 
 class Element {
   constructor() {
@@ -35,7 +36,7 @@ class Element {
 function setup({ script = false, mse = false } = {}) {
   const elements = new Map();
   const get = id => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); };
-  const requests = [], players = [], sources = [], timers = new Map();
+  const requests = [], players = [], sources = [], blobs = [], timers = new Map();
   let tick, serial = 0;
   const audio = get("audio");
   audio.currentTime = 0; audio.paused = true; audio.readyState = 0; audio.duration = 100;
@@ -60,7 +61,7 @@ function setup({ script = false, mse = false } = {}) {
   class MediaSource extends Element {
     static isTypeSupported() { return true; }
     constructor() { super(); this.readyState = "open"; this.buffer = new Element(); sources.push(this); }
-    addSourceBuffer() { this.buffer.appendBuffer = () => {}; return this.buffer; }
+    addSourceBuffer(mime) { this.mime = mime; this.buffer.appendBuffer = () => {}; return this.buffer; }
     endOfStream() { this.readyState = "ended"; }
   }
   const window = {};
@@ -68,7 +69,7 @@ function setup({ script = false, mse = false } = {}) {
   if (!script) installAPI();
   if (mse) window.MediaSource = MediaSource;
   const document = { getElementById: get, createElement: () => new Element(), head: new Element() };
-  startApp({ window, document, Blob, URL: { createObjectURL: () => `blob:${++serial}`, revokeObjectURL() {} },
+  startApp({ window, document, Blob, URL: { createObjectURL: value => { if (value instanceof Blob) blobs.push(value); return `blob:${++serial}`; }, revokeObjectURL() {} },
     fetch: url => { const result = deferred(); requests.push({ url, ...result }); return result.promise; },
     setInterval: callback => { tick = callback; },
     setTimeout: callback => { const id = ++serial; timers.set(id, callback); return id; },
@@ -97,7 +98,7 @@ function setup({ script = false, mse = false } = {}) {
     audio.buffered = { length: 1, start: () => start, end: () => end };
     tick(); await flush();
   };
-  return { playable, get, requests, players, sources, timers, audio, window, document, installAPI, submit, preview, click, column, stream, loadTrack, tick: () => tick() };
+  return { blobs, playable, get, requests, players, sources, timers, audio, window, document, installAPI, submit, preview, click, column, stream, loadTrack, tick: () => tick() };
 }
 
 test("metadata failure clears the shared request and a later click retries", async () => {
@@ -391,4 +392,83 @@ test("pause while play is pending cannot activate from the late resolution", asy
   play.resolve(); await flush();
   assert.equal(h.players[0].muted, false);
   assert.equal(h.column(F).classes.has("active"), false);
+});
+
+const captured = JSON.parse(await readFile(new URL("./fixtures/youtube-multilingual.json", import.meta.url)));
+const response = data => ({ ok: true, json: async () => data });
+const byId = (h, id) => h.get("formats").children.find(el => el.querySelector(".variant").textContent?.startsWith(`ID ${id} ·`) || el.querySelector(".variant").textContent === `ID ${id}`);
+const complete = async (h, request) => {
+  const reads = h.stream(request, null); await flush();
+  reads[0].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  reads[1].resolve({ done: true }); await flush();
+};
+
+test("authoritative known-ID metadata drives labels, MSE, Blob MIME and download name", async () => {
+  const h = setup({ mse: true }); await h.preview();
+  const fmt = { format_id: F.id, ext: "webm", acodec: "opus", abr: 123.456, mime: 'audio/webm; codecs="opus"', filesize_approx: 1048576 };
+  assert.equal(h.column(F).querySelector(".abr").textContent, "Estimated 30 kbps");
+  const pick = h.click(F); h.requests[0].resolve(response({ title: "Changed", formats: [fmt] })); await pick;
+  assert.equal(h.column(F).querySelector(".codec").textContent, "opus");
+  assert.equal(h.column(F).querySelector(".abr").textContent, "123.456 kbps");
+  assert.equal(h.column(F).querySelector(".ext").textContent, "webm");
+  const reads = h.stream(h.requests[1], null); await flush();
+  reads[0].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  h.sources[0].emit("sourceopen"); assert.equal(h.sources[0].mime, fmt.mime);
+  reads[1].resolve({ done: true }); await flush();
+  assert.equal(h.blobs[0].type, "audio/webm");
+  assert.equal(h.column(F).querySelector(".download").download, `Changed 123.456 kbps [${F.id}].webm`);
+});
+
+test("captured variants render separately, select exact IDs and retain backend filenames", async () => {
+  const h = setup(); await h.preview();
+  const pick = h.click(F); h.requests[0].resolve(response(captured)); await pick;
+  assert.equal(h.requests.length, 1); // speculative ID absent from captured response
+  assert.match(h.column(F).querySelector(".size").textContent, /Unavailable/);
+  for (const f of captured.formats) {
+    const el = byId(h, f.format_id);
+    assert.ok(el); assert.equal(el.hidden, false);
+    assert.match(el.querySelector(".variant").textContent, new RegExp(`${f.language}.*${f.format_note.replace(/[()]/g, "\\$&")}`));
+    await el.querySelector(".pick").emit("click");
+    assert.equal(new URL(h.requests.at(-1).url, "http://local").searchParams.get("format"), f.format_id);
+    await complete(h, h.requests.at(-1));
+    assert.equal(el.querySelector(".download").download, f.filename);
+    assert.equal(h.blobs.at(-1).type, f.mime.split(";")[0]);
+  }
+  await h.submit(B);
+  assert.equal(byId(h, captured.formats[0].format_id).hidden, true);
+  assert.equal(h.column(F).querySelector(".abr").textContent, "Estimated 30 kbps");
+});
+
+test("missing metadata stays unknown, estimates are labelled and remote text stays out of HTML", async () => {
+  const h = setup(); await h.preview();
+  const note = '<img src=x onerror="alert(1)">';
+  const formats = [{ format_id: F.id, format_note: note }, { format_id: "new", ext: "webm", acodec: "opus", mime: 'audio/webm; codecs="opus"', filesize_approx: 1048576 }];
+  const pick = h.click(F); h.requests[0].resolve(response({ formats })); await pick;
+  assert.equal(h.column(F).querySelector(".abr").textContent, "Unknown bitrate");
+  assert.equal(h.column(F).querySelector(".codec").textContent, "Unknown codec");
+  assert.equal(h.column(F).querySelector(".ext").textContent, "Unknown container");
+  assert.match(h.column(F).querySelector(".size").textContent, /Unknown size/);
+  assert.equal(h.column(F).querySelector(".variant").textContent, `ID ${F.id} · ${note}`);
+  assert.ok(!h.column(F).innerHTML.includes(note));
+  assert.equal(byId(h, "new").querySelector(".size").textContent, "Estimated 1.0 MB");
+  await complete(h, h.requests[1]);
+  assert.match(h.column(F).querySelector(".download").download, /Unknown bitrate.*\.bin$/);
+});
+
+test("no supported formats is distinct from browser playback limitations", async () => {
+  const h = setup(); await h.preview();
+  const pick = h.click(F); h.requests[0].resolve(response({ formats: [] })); await pick;
+  assert.match(h.get("video-error").value, /No supported audio-only HTTP\/HTTPS formats/);
+  assert.equal(h.requests.length, 1);
+  assert.ok(h.column(F).querySelector(".pick").disabled);
+  await h.submit(B);
+  h.audio.canPlayType = () => "";
+  const next = h.click(F); h.requests[1].resolve(metadata()); await next;
+  assert.equal(h.column(F).querySelector(".pick").disabled, false);
+  assert.match(h.column(F).querySelector(".status").textContent, /Browser playback.*download/);
+  await complete(h, h.requests[2]);
+  assert.equal(h.column(F).querySelector(".download").hidden, false);
+  h.audio.onerror();
+  assert.match(h.get("video-error").value, /in this browser/);
+  assert.equal(h.column(F).querySelector(".download").hidden, false);
 });

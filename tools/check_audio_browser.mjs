@@ -57,7 +57,7 @@ try {
         } };
       }, { mse });
       await page.route("**/api/formats?**", route => route.fulfill({
-        json: { title: "Fixture", formats: [{ format_id: id }] },
+        json: { title: "Fixture", formats: [{ format_id: id, ext: ext === "webm" ? "webm" : "m4a", acodec: ext === "webm" ? "opus" : "mp4a.40.2", abr: ext === "webm" ? 160 : 128, mime: ext === "webm" ? 'audio/webm; codecs="opus"' : 'audio/mp4; codecs="mp4a.40.2"' }] },
       }));
       const body = ext === "broken" ? Buffer.from("not audio") : await readFile(join(directory, "tone." + ext));
       let release;

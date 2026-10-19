@@ -4,7 +4,7 @@ import os
 import re
 from pathlib import Path
 from time import monotonic
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import anyio
 
@@ -66,18 +66,21 @@ def extract(video_id: str) -> dict:
 
 
 def mime_for(fmt: dict) -> str:
-    container = "audio/webm" if fmt.get("ext") == "webm" else "audio/mp4"
+    ext = fmt.get("ext")
+    container = {"webm": "audio/webm", "m4a": "audio/mp4", "mp4": "audio/mp4", "mp3": "audio/mpeg", "ogg": "audio/ogg", "opus": "audio/ogg", "flac": "audio/flac", "wav": "audio/wav"}.get(ext, "application/octet-stream")
     return f'{container}; codecs="{fmt.get("acodec")}"'
 
 
 def download_filename(info: dict, fmt: dict) -> str:
-    return quote(f"{info.get('title') or info['id']} {fmt['abr']} kbps.{fmt['ext']}", safe="")
+    bitrate = f"{fmt['abr']} kbps" if fmt.get("abr") else "Unknown bitrate"
+    variant = f" [{fmt['format_id']}]" if fmt.get("language") or fmt.get("format_note") else ""
+    return quote(f"{info.get('title') or info['id']} {bitrate}{variant}.{fmt.get('ext') or 'bin'}", safe="")
 
 
 def audio_formats(info: dict) -> list[dict]:
-    keys = ("format_id", "ext", "acodec", "abr", "filesize", "filesize_approx")
+    keys = ("format_id", "ext", "acodec", "abr", "filesize", "filesize_approx", "language", "format_note", "audio_channels")
     return [
-        {k: f.get(k) for k in keys} | {"mime": mime_for(f)}
+        {k: f.get(k) for k in keys} | {"mime": mime_for(f), "filename": unquote(download_filename(info, f))}
         for f in info.get("formats", [])
         if f.get("vcodec") == "none"
         and f.get("acodec") not in (None, "none")

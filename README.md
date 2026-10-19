@@ -6,8 +6,8 @@ tracks in various formats.
 ## How to use Dallapé
 
 The user can submit a video URL and preview it embedded on the page. Below the
-video preview, all audio formats are listed in columns. Clicking on an audio
-format will switch the sound of the video being played to the selected format so
+video preview, common YouTube audio formats are shown as speculative columns.
+Clicking on an audio format will switch the sound of the video being played to the selected format so
 the user will be able to listen to the difference in real time. Each format has
 a button for downloading the corresponding audio file.
 
@@ -18,10 +18,16 @@ track needs to be fetched separately from the video server.
 
 ### Identifying available audio formats
 
-Initially, all audio formats supported by the video provider are displayed in
-the audio format columns. The first click on any audio format will first fetch
+Initially, a small catalog of common YouTube formats is displayed with estimated
+bitrates and unconfirmed availability. The first click on any audio format fetches
 the list of available audio formats for that video from the server, and
-unavailable formats will be disabled visually. Concurrent clicks share this request.
+unavailable formats will be disabled visually. Supported IDs absent from the
+initial catalog get their own columns. Backend codec, container, bitrate, language
+and variant metadata replace catalog guesses. Missing bitrate or size is labelled
+unknown; approximate sizes are labelled estimated. Language is shown only when
+reported by the backend. IDs distinguish variants, even when labels match.
+Playback MIME and download names use the selected backend metadata. Concurrent
+clicks share this request.
 If it fails, click a format again to retry. A late response from a previous
 video cannot change the current selection.
 
@@ -62,16 +68,21 @@ Completed files remain downloadable even if this browser cannot decode them.
 Selecting a completed file again retries through Blob playback. Incomplete
 failed tracks are discarded and can be fetched again.
 
-Once caching has completed, also the file size is displayed and the download
-button enabled. A fully fetched audio file is also fully cached on the frontend
+Once caching completes, the measured file size replaces the metadata size and
+the download button is enabled. A fully fetched audio file is also fully cached on the frontend
 so the backend can discard the data and scale to zero.
 
 ### Video URLs and IDs
 
-The video to preview is identified by its URL or ID. All the known different URL
-variants for a video provider are recognized. For video IDs, the provider is
-automatically detected based on the format of the ID. If the ID format is not
-recognized, the most popular provider is assumed.
+Only YouTube is supported. Enter an 11-character YouTube video ID or a supported
+YouTube watch, short-link, Shorts, embed or live URL. Other providers and arbitrary
+IDs are rejected; there is no provider detection or fallback.
+
+The backend exposes audio-only formats delivered over HTTP or HTTPS. Video-bearing
+and manifest formats are excluded. An empty list means no supported formats for
+that video. Browser codec limitations are separate: a supported format can still
+be fetched and downloaded even when the browser cannot play it. Without streaming
+support, playback waits for the completed file and tries Blob decoding.
 
 ### The software stack
 
@@ -84,7 +95,7 @@ frontend and backend as a Markdown table:
 | -------------------------------------------- | ------------------------------- |
 | validate video URL/ID entered by the user    |                                 |
 | embed video preview with playback controls   |                                 |
-| show all audio formats the provider supports |                                 |
+| show speculative and available audio formats |                                 |
 | query backend for formats for the video      | fetch audio formats for a video |
 | cache formats for the video                  |                                 |
 | query backend for audio track content        | fetch audio track content       |
@@ -196,3 +207,11 @@ Client Range requests are not forwarded. The endpoint promises neither partial
 responses nor client resume support. Unknown-size streams use one upstream
 request and rely on clean upstream EOF and HTTP framing, rather than an
 independently known total size.
+
+The formats response retains `format_id`, `ext`, `acodec`, `abr`, `filesize`,
+`filesize_approx` and `mime`. Additive nullable fields `language`, `format_note`
+and `audio_channels` preserve extractor variant metadata. `filename` is the
+unencoded download name derived from that format and title; the audio response
+percent-encodes the same name in Content-Disposition. Missing bitrate uses
+"Unknown bitrate". Language/variant names include the format ID to distinguish
+tracks. Approximate size never becomes an HTTP Content-Length.

@@ -6,7 +6,7 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
   const audio = document.getElementById("audio");
   const formatsEl = document.getElementById("formats");
   const errorEl = document.getElementById("video-error");
-  const videos = new Map(); // video id -> { id, title, formats: null | Set(ids), loading, tracks: Map(format id -> track), wanted }
+  const videos = new Map(); // video id -> { id, title, formats: null | Map(id -> metadata), loading, tracks: Map(format id -> track), wanted }
   let video = null; // state of the video in the player
   let player = null;
   let activeFormat = null;
@@ -17,7 +17,10 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
   let playerUsable = false;
 
   const api = (path, params) => fetch(`${API}${path}?${new URLSearchParams(params)}`);
-  const columns = new Map(YOUTUBE_AUDIO_FORMATS.map((f) => [f.id, renderColumn(f)]));
+  const catalog = new Map(YOUTUBE_AUDIO_FORMATS.map(f => [f.id, { ...f, speculative: true }]));
+  const columns = new Map([...catalog].map(([id, f]) => [id, renderColumn(f)]));
+  const bitrate = fmt => fmt.abr > 0 ? `${fmt.speculative ? "Estimated " : ""}${fmt.abr} kbps` : "Unknown bitrate";
+  const label = fmt => `${fmt.codec}, ${bitrate(fmt)}, ${fmt.ext ?? "Unknown container"}${fmt.language ? `, ${fmt.language}` : ""}${fmt.note ? `, ${fmt.note}` : ""}, ID ${fmt.id}`;
 
   // --- player -----------------------------------------------------------------
 
@@ -130,9 +133,10 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
           <circle class="fill" cx="18" cy="18" r="15.915"/>
           <circle class="pos" cx="33.915" cy="18" r="2"/>
         </svg>
-        <span class="codec">${fmt.codec}</span><span class="abr">${fmt.abr} kbps</span><span class="ext">${fmt.ext}</span>
+        <span class="codec"></span><span class="abr"></span><span class="ext"></span>
+        <span class="variant"></span>
       </button>
-      <span class="size"></span>
+      <span class="size"></span><span class="status"></span>
       <a class="download" hidden>Download</a>`;
     el.querySelector(".pick").addEventListener("click", () => pick(fmt));
     formatsEl.append(el);
@@ -144,7 +148,11 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     if (!res.ok) throw new Error((await res.json()).detail ?? res.statusText);
     const data = await res.json();
     v.title = data.title;
-    v.formats = new Set(data.formats.map((f) => f.format_id));
+    v.formats = new Map(data.formats.map(f => [f.format_id, {
+      id: f.format_id, ext: f.ext, codec: f.acodec ?? "Unknown codec", abr: f.abr,
+      mime: f.mime ?? "", size: f.filesize, estimatedSize: f.filesize_approx,
+      language: f.language, note: f.format_note, channels: f.audio_channels, filename: f.filename,
+    }]));
   }
 
   async function pick(fmt) {
@@ -167,7 +175,12 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     }
     if (request !== submission || v.wanted !== fmt.id || !playerUsable) return;
     render();
-    if (!v.formats.has(fmt.id)) { v.wanted = null; render(); return; }
+    if (!v.formats.has(fmt.id)) {
+      v.wanted = null;
+      errorEl.value = v.formats.size ? "This format is unavailable for this video. Choose an available format." : "No supported audio-only HTTP/HTTPS formats are available for this video.";
+      render(); return;
+    }
+    fmt = v.formats.get(fmt.id);
     if (!v.tracks.has(fmt.id)) fetchTrack(v, fmt);
     maybeSwitch(v);
   }
@@ -210,7 +223,7 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
       if (attachment?.track === track) failAudio(attachment, err);
       else if (request === submission && v.wanted === fmt.id) {
         v.wanted = null;
-        errorEl.value = `Could not fetch ${fmt.codec} ${fmt.abr} kbps: ${err.message}. Click the format to retry.`;
+        errorEl.value = `Could not fetch ${label(fmt)}: ${err.message}. Click the format to retry.`;
       }
     }
     if (request === submission) { render(); maybeSwitch(v); }
@@ -234,7 +247,7 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     if (!track.done) v.tracks.delete(track.fmt.id);
     v.wanted = null;
     stopAudio();
-    errorEl.value = `Could not play ${track.fmt.codec} ${track.fmt.abr} kbps: ${err.message}. Click the format to retry. Completed files remain available to download.`;
+    errorEl.value = `Could not play ${label(track.fmt)} in this browser: ${err.message}. Click the format to retry. Completed files remain available to download.`;
     render();
   }
 
@@ -349,24 +362,36 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     if (!video) return;
     const duration = playerUsable ? player.getDuration() : 0;
     const pos = duration ? player.getCurrentTime() / duration : 0;
+    for (const [id, fmt] of video.formats ?? []) {
+      if (!columns.has(id)) columns.set(id, renderColumn(fmt));
+    }
     for (const [id, el] of columns) {
       const track = video.tracks.get(id);
       el.classList.toggle("disabled", !!video.formats && !video.formats.has(id));
       el.classList.toggle("active", activeFormat === id);
-      const fmt = YOUTUBE_AUDIO_FORMATS.find(f => f.id === id);
+      const fmt = video.formats?.get(id) ?? catalog.get(id);
+      el.hidden = !fmt;
+      if (!fmt) continue;
+      el.querySelector(".codec").textContent = fmt.codec;
+      el.querySelector(".abr").textContent = bitrate(fmt);
+      el.querySelector(".ext").textContent = fmt.ext ?? "Unknown container";
+      el.querySelector(".variant").textContent = `ID ${id}${fmt.language ? ` · ${fmt.language}` : ""}${fmt.note ? ` · ${fmt.note}` : ""}${fmt.channels ? ` · ${fmt.channels} channels` : ""}`;
+      const unavailable = video.formats && !video.formats.has(id);
+      const playback = !fmt.speculative && !audio.canPlayType?.(fmt.mime) ? "Browser playback support unknown or unavailable; download available after fetching" : "";
       const pick = el.querySelector(".pick");
       pick.setAttribute("aria-pressed", String(video.wanted === id));
       pick.setAttribute("aria-busy", String(video.wanted === id && activeFormat !== id));
-      pick.setAttribute("aria-label", `${fmt.codec} ${fmt.abr} kbps, ${activeFormat === id ? "playing" : video.wanted === id ? "loading" : "select audio"}`);
+      pick.setAttribute("aria-label", `${label(fmt)}, ${activeFormat === id ? "playing" : video.wanted === id ? "loading" : "select audio"}`);
       el.querySelector(".pick").disabled = !!video.formats && !video.formats.has(id);
       const fraction = track ? (track.done ? 1 : track.total ? track.received / track.total : 0) : 0;
       el.querySelector(".fill").style.strokeDashoffset = 100 - fraction * 100;
       el.querySelector(".pos").setAttribute("transform", `rotate(${pos * 360} 18 18)`);
-      el.querySelector(".size").textContent = track?.done ? fmtSize(track.received) : track ? track.total ? `${Math.round(fraction * 100)} %` : "Downloading…" : "";
+      el.querySelector(".size").textContent = track?.done ? fmtSize(track.received) : track ? track.total ? `${Math.round(fraction * 100)} %` : "Downloading…" : unavailable ? "Unavailable for this video" : fmt.speculative ? "Availability unconfirmed" : fmt.size > 0 ? fmtSize(fmt.size) : fmt.estimatedSize > 0 ? `Estimated ${fmtSize(fmt.estimatedSize)}` : "Unknown size";
+      el.querySelector(".status").textContent = unavailable ? "" : playback;
       if (video.wanted === id && activeFormat !== id) el.querySelector(".size").textContent += " · Loading audio";
       const a = el.querySelector(".download");
       a.hidden = !track?.done;
-      if (track?.done) { a.href = track.blobUrl; a.download = `${video.title ?? video.id} ${track.fmt.abr} kbps.${track.fmt.ext}`; }
+      if (track?.done) { a.href = track.blobUrl; a.download = track.fmt.filename ?? `${video.title ?? video.id} ${bitrate(track.fmt)} [${id}].${track.fmt.ext ?? "bin"}`; }
     }
   }
 

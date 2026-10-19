@@ -1,10 +1,10 @@
-// Video providers. YouTube is the only one so far and the fallback for bare ids.
+// YouTube URL parsing and speculative audio columns.
 
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"]);
 const YOUTUBE_PATHS = ["/shorts/", "/embed/", "/live/", "/v/"];
 
-// Known YouTube audio-only itags. yt-dlp no longer ships this table, so it is data here.
+// Nominal estimates until the backend supplies metadata for the selected video.
 export const YOUTUBE_AUDIO_FORMATS = [
   { id: "599", ext: "m4a", codec: "HE-AAC", abr: 30, mime: 'audio/mp4; codecs="mp4a.40.5"' },
   { id: "139", ext: "m4a", codec: "HE-AAC", abr: 48, mime: 'audio/mp4; codecs="mp4a.40.5"' },

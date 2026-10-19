@@ -22,5 +22,8 @@ button:disabled { background: var(--disabled); cursor: not-allowed; }
 .ring .pos { fill: var(--fg); visibility: hidden; }
 .format.active .ring .pos { visibility: visible; }
 .codec { font-weight: 600; }
-.abr, .ext, .size { font-size: .85rem; color: var(--muted); }
+.abr, .ext, .size, .variant, .status { font-size: .85rem; color: var(--muted); }
 .download { font-size: .85rem; color: var(--accent); }
+
+.format[hidden] { display: none; }
+.variant, .status { text-align: center; overflow-wrap: anywhere; }
