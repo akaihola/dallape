@@ -19,6 +19,9 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
+- [12] Re-check the 2026-09-19 architecture review against current main
+  <!-- hai:{"id":"simple-5d60f3d5-e3a2-46bf-b0f2-6a259f436766","labels":["steward","review"],"createdAt":"2026-10-21T05:37:54.352Z","updatedAt":"2026-10-21T05:37:54.352Z"} -->
+
 ## Scheduled
 
 ## In Progress
@@ -77,7 +80,7 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 [2]: docs/tasks/2-gather-acceptance-evidence-for-the-5-legacy-review-queue-items.md
 
-<!-- hai:reserved-numbers:1,2,3,4,5,6,7,8,9,10,11 -->
+<!-- hai:reserved-numbers:1,2,3,4,5,6,7,8,9,10,11,12 -->
 
 [3]: docs/tasks/3-check-the-2026-09-19-architecture-review-s-remediation-plan-against-th.md
 
@@ -96,6 +99,8 @@ Rules for TASKS.md usage are at the bottom of the file.
 [10]: docs/tasks/10-use-backend-format-metadata-for-playback-and-downloads.md
 
 [11]: docs/tasks/11-document-actual-contracts-and-finish-the-existing-release-gate.md
+
+[12]: docs/tasks/12-re-check-the-2026-09-19-architecture-review-against-current-main.md
 
 ## Rules
 
