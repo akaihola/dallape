@@ -215,24 +215,90 @@ test("retired MediaSource, source-buffer, audio-error and play-rejection callbac
   assert.equal(h.get("video-error").value, "");
 });
 
-test("audio playback and buffer errors clear activation and permit retry", async () => {
-  for (const failure of ["audio", "buffer", "sourceopen", "play"]) {
-    const h = setup({ mse: true }); await h.preview(); const reads = await h.loadTrack();
-    if (failure === "audio") h.audio.onerror();
-    if (failure === "sourceopen") {
-      h.sources[0].addSourceBuffer = () => { throw new Error("unsupported buffer"); };
-      h.sources[0].emit("sourceopen");
-    }
-    if (failure === "buffer") { h.sources[0].emit("sourceopen"); h.sources[0].buffer.emit("error"); }
-    if (failure === "play") { await h.playable(); h.audio.paused = true; h.audio.play = () => Promise.reject(new Error("blocked")); h.tick(); await flush(); }
-    assert.equal(h.players[0].muted, false, failure);
-    assert.equal(h.column(F).classes.has("active"), false, failure);
-    assert.match(h.get("video-error").value, /retry/);
+const failPlayback = async (h, failure) => {
+  const ms = h.sources[0];
+  if (failure === "create") ms.addSourceBuffer = () => { throw new Error("unsupported buffer"); };
+  if (failure === "append") ms.addSourceBuffer = () => ({ appendBuffer() { throw new Error("append failed"); }, addEventListener() {}, removeEventListener() {} });
+  if (["create", "append", "decode"].includes(failure)) ms.emit("sourceopen");
+  if (failure === "decode") ms.buffer.emit("error");
+  if (failure === "media") h.audio.onerror();
+  if (failure === "play") { await h.playable(); h.audio.paused = true; h.audio.play = () => Promise.reject(new Error("blocked")); h.tick(); await flush(); }
+};
+
+test("early playback failures keep the original sound and finish the exact download for a Blob retry", async () => {
+  const bytes = Uint8Array.from({ length: 10 }, (_, i) => i + 1);
+  for (const length of ["10", null]) for (const failure of ["create", "append", "decode", "media", "play"]) for (const slowEnd of [false, true]) {
+    const name = `${failure}, length ${length}, ${slowEnd ? "only EOF" : "bytes and EOF"} after failure`;
+    const h = setup({ mse: true }); await h.preview();
+    const pick = h.click(F); h.requests[0].resolve(metadata()); await pick;
+    const reads = h.stream(h.requests[1], length); await flush();
+    reads[0].resolve({ value: bytes.slice(0, 5), done: false }); await flush();
+    if (slowEnd) { reads[1].resolve({ value: bytes.slice(5), done: false }); await flush(); }
+    await failPlayback(h, failure);
+    assert.equal(h.players[0].muted, false, name);
+    assert.equal(h.audio.src, "", name);
+    assert.equal(h.column(F).classes.has("active"), false, name);
+    assert.match(h.get("video-error").value, /download continues.*retry/, name);
+    assert.equal(h.requests[1].signal.aborted, false, name);
+    assert.equal(h.app.cacheStats().tracks, 1, name);
+    h.tick(); assert.equal(h.sources.length, 1, name);
+    if (!slowEnd) { reads[1].resolve({ value: bytes.slice(5), done: false }); await flush(); }
+    reads[2].resolve({ done: true }); await flush();
+    const download = h.column(F).querySelector(".download");
+    assert.equal(download.hidden, false, name);
+    assert.deepEqual(new Uint8Array(await h.blobs[0].arrayBuffer()), bytes, name);
+    assert.equal(h.players[0].muted, false, name);
+    assert.equal(h.audio.src, "", name);
+    h.audio.play = () => { h.audio.paused = false; return Promise.resolve(); };
     h.audio.readyState = 0;
     await h.click(F);
-    // A late failure from the discarded stream must not delete its replacement request.
-    reads[1].reject(new Error("discarded stream")); await flush();
-    await h.click(F); assert.equal(h.requests.length, 3, failure);
+    assert.equal(h.audio.src, download.href, name);
+    await h.playable(); assert.equal(h.players[0].muted, true, name);
+    assert.equal(h.requests.length, 2, name);
+    assert.equal(h.sources.length, 1, name);
+    // A decoder rejecting the complete file still leaves it downloadable.
+    h.audio.onerror();
+    assert.equal(h.players[0].muted, false, name);
+    assert.equal(download.hidden, false, name);
+    assert.match(h.get("video-error").value, /retry.*remains available to download/, name);
+  }
+});
+
+test("selecting a detached transfer again waits for its Blob instead of streaming", async () => {
+  const h = setup({ mse: true }); await h.preview(); const reads = await h.loadTrack();
+  h.audio.onerror();
+  await h.click(F); h.tick();
+  assert.equal(h.sources.length, 1);
+  assert.equal(h.audio.src, "");
+  assert.equal(h.requests.length, 2);
+  assert.equal(h.players[0].muted, false);
+  assert.match(h.column(F).querySelector(".size").textContent, /Loading audio/);
+  reads[1].resolve({ value: new Uint8Array(5), done: false }); await flush();
+  reads[2].resolve({ done: true }); await flush();
+  assert.equal(h.audio.src, h.column(F).querySelector(".download").href);
+  await h.playable(); assert.equal(h.players[0].muted, true);
+});
+
+test("a detached transfer still cancels on navigation, format change, integrity failure and budget overflow", async () => {
+  for (const end of ["navigation", "format", "truncated", "oversized", "budget"]) {
+    const h = setup({ mse: true, cache: { maxBytes: 15 } }); await h.preview();
+    const reads = await h.loadTrack(), request = h.requests[1];
+    h.audio.onerror();
+    if (end === "navigation") await h.submit(B);
+    if (end === "format") await h.click(G);
+    if (end === "truncated") reads[1].resolve({ done: true });
+    if (end === "oversized") reads[1].resolve({ value: new Uint8Array(6), done: false });
+    if (end === "budget") reads[1].resolve({ value: new Uint8Array(1), done: false });
+    await flush();
+    assert.equal(request.signal.aborted, true, end);
+    assert.ok(reads.cancelled > 0, end);
+    assert.equal(h.column(F).querySelector(".download").hidden, true, end);
+    assert.deepEqual(h.app.cacheStats().reservedBytes, 0, end);
+    assert.equal(h.app.cacheStats().chunkBytes, 0, end);
+    if (!["navigation", "format"].includes(end)) assert.match(h.get("video-error").value, /Could not fetch.*retry/, end);
+    reads.at(-1).resolve({ done: true }); await flush();
+    assert.equal(h.blobs.length, 0, end);
+    assert.equal(h.players[0].muted, false, end);
   }
 });
 
