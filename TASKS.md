@@ -24,10 +24,10 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Scheduled
 
-- [13] Preserve audio downloads after playback fails before EOF
-  <!-- hai:{"id":"simple-b0d297ff-d8e0-4c63-bc53-27eeed26f0f4","labels":["steward"],"createdAt":"2026-10-21T09:24:14.668Z","updatedAt":"2026-10-21T09:27:47.456Z"} -->
-
 ## In Progress
+
+- [~] [13] Preserve audio downloads after playback fails before EOF
+      <!-- hai:{"id":"simple-b0d297ff-d8e0-4c63-bc53-27eeed26f0f4","labels":["steward"],"createdAt":"2026-10-21T09:24:14.668Z","updatedAt":"2026-10-21T09:28:09.868Z"} -->
 
 - [~] [*] Deploy the scanner-probe WAF rule defined in
       `docs/tasks/1-scaleway-deployment.md` (needs a Zone WAF Write token).
