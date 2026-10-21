@@ -35,8 +35,8 @@ Rules for TASKS.md usage are at the bottom of the file.
 - [ ] [13] Preserve audio downloads after playback fails before EOF
       <!-- hai:{"id":"simple-b0d297ff-d8e0-4c63-bc53-27eeed26f0f4","labels":["steward"],"createdAt":"2026-10-21T09:24:14.668Z","updatedAt":"2026-10-21T09:32:56.363Z"} -->
 
-- [ ] [12] Re-check the 2026-09-19 architecture review against current main
-      <!-- hai:{"id":"simple-5d60f3d5-e3a2-46bf-b0f2-6a259f436766","labels":["steward","review"],"createdAt":"2026-10-21T05:37:54.352Z","updatedAt":"2026-10-21T06:57:19.671Z"} -->
+- [x] [12] Re-check the 2026-09-19 architecture review against current main
+      <!-- hai:{"id":"simple-5d60f3d5-e3a2-46bf-b0f2-6a259f436766","labels":["steward","review"],"createdAt":"2026-10-21T05:37:54.352Z","updatedAt":"2026-10-21T11:12:38.156Z"} -->
 
 - [x] [9] Bound browser audio retention and clean retired tracks
     - Depends on: [4], [5]
