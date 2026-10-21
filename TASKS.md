@@ -64,9 +64,11 @@ Rules for TASKS.md usage are at the bottom of the file.
 - [ ] [*] Retry what task 5f5f0c2e-1492-41fc-bc30-4d7209808ebf tried, but now with `, scw`.
 - [ ] [*] If on a NixOS host with no `scw` installed but `comma` available, always use
   `, scw` instead of just `scw`.
-- [ ] [*] Create a `Dockerfile` for running the backend on Google Cloud Run, Fly.io, or an
+- [x] [*] Create a `Dockerfile` for running the backend on Google Cloud Run, Fly.io, or an
   always-on VPS. Build and test it.
-- [ ] [*] Include `N kbps` in the downloaded file names.
+      <!-- hai:{"id":"simple-87d137b900ac5652","updatedAt":"2026-10-21T05:30:49.274Z"} -->
+- [x] [*] Include `N kbps` in the downloaded file names.
+      <!-- hai:{"id":"simple-17dcd69e10062d36","updatedAt":"2026-10-21T05:30:51.528Z"} -->
 
 [*]: TASKS.md
 [1]: docs/tasks/1-scaleway-deployment.md
