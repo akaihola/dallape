@@ -36,8 +36,10 @@ button. Submit the same video again to retry. Submissions made while the player
 is starting settle on the latest video once it is ready.
 
 If an audio download or playback fails, the original video's sound resumes and
-the format is no longer marked active. Click that format again to fetch and play
-it again. Browsers without support for streaming that format keep the original
+the format is no longer marked active. After a download failure, click that
+format again to fetch and play it again. A playback failure leaves its download
+running; click the format again to play the complete file without fetching it
+again. Browsers without support for streaming that format keep the original
 sound until the complete audio file is available.
 
 ### Caching audio formats
@@ -64,9 +66,12 @@ observed or claimed.
 
 Without supported MediaSource, a completed Blob must decode and buffer before
 activation. Playback errors clear selection and show retry instructions.
-Completed files remain downloadable even if this browser cannot decode them.
-Selecting a completed file again retries through Blob playback. Incomplete
-failed tracks are discarded and can be fetched again.
+A playback error before the end of the response detaches only that playback
+attempt. The transfer continues under the same cache limits and enables its
+download after a clean end. It is not streamed again: selecting it waits for the
+completed Blob. Completed files remain downloadable even if this browser cannot
+decode them. Selecting a completed file again retries through Blob playback.
+Failed, truncated or oversized transfers are discarded and can be fetched again.
 
 Once caching completes, the measured file size replaces the metadata size and
 the download button is enabled. A fully fetched audio file is cached on the

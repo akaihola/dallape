@@ -237,7 +237,7 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
 
   async function fetchTrack(v, fmt) {
     const request = submission;
-    const track = { fmt, chunks: [], received: 0, total: 0, done: false, append: null, finish: null, blobUrl: null, controller: new AbortController(), reader: null, used: ++clock };
+    const track = { fmt, chunks: [], received: 0, total: 0, done: false, blobOnly: false, append: null, finish: null, blobUrl: null, controller: new AbortController(), reader: null, used: ++clock };
     v.tracks.set(fmt.id, track);
     try {
       const res = await api("/api/audio", { url: v.id, format: fmt.id }, track.controller.signal);
@@ -272,9 +272,9 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
       track.finish?.();
     } catch (err) {
       if (v.tracks.get(fmt.id) !== track) return;
-      if (attachment?.track === track) failAudio(attachment, err);
       retireTrack(v, track);
-      if (request === submission && v.wanted === fmt.id) {
+      // A detached transfer was promised as a download, so report its failure too.
+      if (request === submission && (v.wanted === fmt.id || track.blobOnly)) {
         v.wanted = null;
         errorEl.value = `Could not fetch ${label(fmt)}: ${err.message}. Click the format to retry.`;
       }
@@ -287,20 +287,22 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     if (v !== video || !playerUsable) return;
     const track = v.tracks.get(v.wanted);
     if (!track || attachment?.track === track) return;
-    if (!track.done && !window.MediaSource?.isTypeSupported(track.fmt.mime)) return;
+    if (!track.done && (track.blobOnly || !window.MediaSource?.isTypeSupported(track.fmt.mime))) return;
     stopAudio();
     attachTrack(track);
     syncAudio();
     render();
   }
 
+  /** Playback owns only its attachment: the transfer keeps going as a download,
+   * and this attempt retries playback only from the completed Blob. */
   function failAudio(owner, err) {
     if (attachment !== owner) return;
     const { v, track } = owner;
     v.wanted = null;
+    track.blobOnly = true;
     stopAudio();
-    if (!track.done) retireTrack(v, track);
-    errorEl.value = `Could not play ${label(track.fmt)} in this browser: ${err.message}. Click the format to retry. Completed files remain available to download.`;
+    errorEl.value = `Could not play ${label(track.fmt)} in this browser: ${err.message}. ${track.done ? "Click the format to retry. The file remains available to download." : "Its download continues; click the format to retry from the complete file."}`;
     render();
   }
 

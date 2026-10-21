@@ -208,6 +208,8 @@ a module.
   Blob retry where supported. Transfer corruption, budget overflow and explicit
   retirement must still cancel and discard. No new lifecycle framework is needed.
 
+  Fixed by [13].
+
 ## Design assessment of the added code
 
 The added volume mostly implements real failure handling and regression cases.
@@ -348,3 +350,4 @@ progressive browser evidence, not this newly demonstrated transfer-disposal fix.
 [hai9]: ../tasks/9-bound-browser-audio-retention-and-clean-retired-tracks.md
 [hai10]: ../tasks/10-use-backend-format-metadata-for-playback-and-downloads.md
 [hai11]: ../tasks/11-document-actual-contracts-and-finish-the-existing-release-gate.md
+[13]: ../tasks/13-preserve-audio-downloads-after-playback-fails-before-eof.md
