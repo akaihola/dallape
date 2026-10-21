@@ -19,13 +19,13 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
-- [13] Preserve audio downloads after playback fails before EOF
-  <!-- hai:{"id":"simple-b0d297ff-d8e0-4c63-bc53-27eeed26f0f4","labels":["steward"],"createdAt":"2026-10-21T09:24:14.668Z","updatedAt":"2026-10-21T09:24:14.668Z"} -->
-
 - [14] Security scan of dallape before it goes public
   <!-- hai:{"id":"simple-a5a897e9-e1f7-4c8b-a41b-fd4d4cdf15e3","labels":["steward","security"],"createdAt":"2026-10-21T09:24:16.679Z","updatedAt":"2026-10-21T09:24:16.679Z"} -->
 
 ## Scheduled
+
+- [13] Preserve audio downloads after playback fails before EOF
+  <!-- hai:{"id":"simple-b0d297ff-d8e0-4c63-bc53-27eeed26f0f4","labels":["steward"],"createdAt":"2026-10-21T09:24:14.668Z","updatedAt":"2026-10-21T09:27:47.456Z"} -->
 
 ## In Progress
 
