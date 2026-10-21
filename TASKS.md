@@ -23,14 +23,14 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In Progress
 
-- [~] [12] Re-check the 2026-09-19 architecture review against current main
-      <!-- hai:{"id":"simple-5d60f3d5-e3a2-46bf-b0f2-6a259f436766","labels":["steward","review"],"createdAt":"2026-10-21T05:37:54.352Z","updatedAt":"2026-10-21T06:44:44.185Z"} -->
-
 - [~] [*] Deploy the scanner-probe WAF rule defined in
       `docs/tasks/1-scaleway-deployment.md` (needs a Zone WAF Write token).
       <!-- hai:{"id":"simple-f44c0a9406fd9745","updatedAt":"2026-10-19T15:29:01.637Z"} -->
 
 ## Completed / Accepted
+
+- [ ] [12] Re-check the 2026-09-19 architecture review against current main
+      <!-- hai:{"id":"simple-5d60f3d5-e3a2-46bf-b0f2-6a259f436766","labels":["steward","review"],"createdAt":"2026-10-21T05:37:54.352Z","updatedAt":"2026-10-21T06:57:19.671Z"} -->
 
 - [x] [9] Bound browser audio retention and clean retired tracks
     - Depends on: [4], [5]
