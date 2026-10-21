@@ -19,6 +19,12 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
+- [13] Preserve audio downloads after playback fails before EOF
+  <!-- hai:{"id":"simple-b0d297ff-d8e0-4c63-bc53-27eeed26f0f4","labels":["steward"],"createdAt":"2026-10-21T09:24:14.668Z","updatedAt":"2026-10-21T09:24:14.668Z"} -->
+
+- [14] Security scan of dallape before it goes public
+  <!-- hai:{"id":"simple-a5a897e9-e1f7-4c8b-a41b-fd4d4cdf15e3","labels":["steward","security"],"createdAt":"2026-10-21T09:24:16.679Z","updatedAt":"2026-10-21T09:24:16.679Z"} -->
+
 ## Scheduled
 
 ## In Progress
@@ -80,7 +86,7 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 [2]: docs/tasks/2-gather-acceptance-evidence-for-the-5-legacy-review-queue-items.md
 
-<!-- hai:reserved-numbers:1,2,3,4,5,6,7,8,9,10,11,12 -->
+<!-- hai:reserved-numbers:1,2,3,4,5,6,7,8,9,10,11,12,13,14 -->
 
 [3]: docs/tasks/3-check-the-2026-09-19-architecture-review-s-remediation-plan-against-th.md
 
@@ -101,6 +107,10 @@ Rules for TASKS.md usage are at the bottom of the file.
 [11]: docs/tasks/11-document-actual-contracts-and-finish-the-existing-release-gate.md
 
 [12]: docs/tasks/12-re-check-the-2026-09-19-architecture-review-against-current-main.md
+
+[13]: docs/tasks/13-preserve-audio-downloads-after-playback-fails-before-eof.md
+
+[14]: docs/tasks/14-security-scan-of-dallape-before-it-goes-public.md
 
 ## Rules
 
