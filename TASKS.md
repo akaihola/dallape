@@ -29,28 +29,28 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Completed / Accepted
 
-- [ ] [9] Bound browser audio retention and clean retired tracks
+- [x] [9] Bound browser audio retention and clean retired tracks
     - Depends on: [4], [5]
 
-      <!-- hai:{"id":"simple-6f6789e7-3748-490c-97d8-cdb26ac151fc","labels":["steward"],"createdAt":"2026-10-19T11:15:26.218Z","updatedAt":"2026-10-19T17:16:03.627Z"} -->
+      <!-- hai:{"id":"simple-6f6789e7-3748-490c-97d8-cdb26ac151fc","labels":["steward"],"createdAt":"2026-10-19T11:15:26.218Z","updatedAt":"2026-10-21T05:15:28.558Z"} -->
 
-- [ ] [10] Use backend format metadata for playback and downloads
+- [x] [10] Use backend format metadata for playback and downloads
     - Depends on: [5]
 
-      <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-19T14:41:37.300Z"} -->
+      <!-- hai:{"id":"simple-20fa9eb2-cdcf-466f-be82-c8890cb2d100","labels":["steward"],"createdAt":"2026-10-19T11:15:26.542Z","updatedAt":"2026-10-21T05:15:30.669Z"} -->
 
-- [ ] [5] Activate replacement audio only when it can play
+- [x] [5] Activate replacement audio only when it can play
     - Depends on: [4]
 
-      <!-- hai:{"id":"simple-07d103ef-891b-4179-8e54-1b81a6cb7c3d","labels":["steward"],"createdAt":"2026-10-19T11:15:25.075Z","updatedAt":"2026-10-19T14:34:56.149Z"} -->
+      <!-- hai:{"id":"simple-07d103ef-891b-4179-8e54-1b81a6cb7c3d","labels":["steward"],"createdAt":"2026-10-19T11:15:25.075Z","updatedAt":"2026-10-21T05:15:33.066Z"} -->
 
-- [ ] [6] Validate audio stream bytes and failure recovery
+- [x] [6] Validate audio stream bytes and failure recovery
     - Depends on: [4]
 
-      <!-- hai:{"id":"simple-8e0f78ba-f8d0-493a-a5aa-a70cbcb622ab","labels":["steward"],"createdAt":"2026-10-19T11:15:25.358Z","updatedAt":"2026-10-19T14:26:16.324Z"} -->
+      <!-- hai:{"id":"simple-8e0f78ba-f8d0-493a-a5aa-a70cbcb622ab","labels":["steward"],"createdAt":"2026-10-19T11:15:25.358Z","updatedAt":"2026-10-21T05:15:35.178Z"} -->
 
-- [ ] [4] Fix audio request ownership and retry recovery
-      <!-- hai:{"id":"simple-b2093cf7-c9ea-4453-80cb-a8ecd7453b3f","labels":["steward"],"createdAt":"2026-10-19T11:15:24.739Z","updatedAt":"2026-10-19T14:22:34.152Z"} -->
+- [x] [4] Fix audio request ownership and retry recovery
+      <!-- hai:{"id":"simple-b2093cf7-c9ea-4453-80cb-a8ecd7453b3f","labels":["steward"],"createdAt":"2026-10-19T11:15:24.739Z","updatedAt":"2026-10-21T05:15:37.350Z"} -->
 
 - [x] [3] Check the 2026-09-19 architecture review's remediation plan against the
   code and draft what remains
