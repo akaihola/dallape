@@ -65,8 +65,8 @@ Rules for TASKS.md usage are at the bottom of the file.
   code and draft what remains
       <!-- hai:{"id":"simple-8b6762e0-3247-4251-8e4d-7d32bc872963","labels":["steward","review"],"createdAt":"2026-10-19T11:13:09.552Z","updatedAt":"2026-10-19T14:05:44.353Z"} -->
 
-- [ ] [2] Gather acceptance evidence for the 5 legacy review-queue items
-      <!-- hai:{"id":"simple-365744dc-1e09-4c8c-a42e-0f545e074764","labels":["steward"],"createdAt":"2026-10-17T20:09:29.021Z","updatedAt":"2026-10-17T20:16:19.405Z"} -->
+- [x] [2] Gather acceptance evidence for the 5 legacy review-queue items
+      <!-- hai:{"id":"simple-365744dc-1e09-4c8c-a42e-0f545e074764","labels":["steward"],"createdAt":"2026-10-17T20:09:29.021Z","updatedAt":"2026-10-21T17:11:47.796Z"} -->
 
 - [ ] [1] Deploy and validate the app on a Scaleway Serverless Container behind a
   Cloudflare loading Worker, following drum-transcribe.
