@@ -29,11 +29,11 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Completed / Accepted
 
-- [ ] [14] Security scan of dallape before it goes public
-      <!-- hai:{"id":"simple-a5a897e9-e1f7-4c8b-a41b-fd4d4cdf15e3","labels":["steward","security"],"createdAt":"2026-10-21T09:24:16.679Z","updatedAt":"2026-10-21T18:22:57.787Z"} -->
+- [x] [14] Security scan of dallape before it goes public
+      <!-- hai:{"id":"simple-a5a897e9-e1f7-4c8b-a41b-fd4d4cdf15e3","labels":["steward","security"],"createdAt":"2026-10-21T09:24:16.679Z","updatedAt":"2026-10-21T21:53:53.981Z"} -->
 
-- [ ] [13] Preserve audio downloads after playback fails before EOF
-      <!-- hai:{"id":"simple-b0d297ff-d8e0-4c63-bc53-27eeed26f0f4","labels":["steward"],"createdAt":"2026-10-21T09:24:14.668Z","updatedAt":"2026-10-21T09:32:56.363Z"} -->
+- [x] [13] Preserve audio downloads after playback fails before EOF
+      <!-- hai:{"id":"simple-b0d297ff-d8e0-4c63-bc53-27eeed26f0f4","labels":["steward"],"createdAt":"2026-10-21T09:24:14.668Z","updatedAt":"2026-10-21T21:53:54.834Z"} -->
 
 - [x] [12] Re-check the 2026-09-19 architecture review against current main
       <!-- hai:{"id":"simple-5d60f3d5-e3a2-46bf-b0f2-6a259f436766","labels":["steward","review"],"createdAt":"2026-10-21T05:37:54.352Z","updatedAt":"2026-10-21T11:12:38.156Z"} -->
