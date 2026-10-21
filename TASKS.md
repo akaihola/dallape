@@ -21,10 +21,10 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Scheduled
 
-- [14] Security scan of dallape before it goes public
-  <!-- hai:{"id":"simple-a5a897e9-e1f7-4c8b-a41b-fd4d4cdf15e3","labels":["steward","security"],"createdAt":"2026-10-21T09:24:16.679Z","updatedAt":"2026-10-21T18:09:31.227Z"} -->
-
 ## In Progress
+
+- [~] [14] Security scan of dallape before it goes public
+      <!-- hai:{"id":"simple-a5a897e9-e1f7-4c8b-a41b-fd4d4cdf15e3","labels":["steward","security"],"createdAt":"2026-10-21T09:24:16.679Z","updatedAt":"2026-10-21T18:10:00.871Z"} -->
 
 - [~] [*] Deploy the scanner-probe WAF rule defined in
       `docs/tasks/1-scaleway-deployment.md` (needs a Zone WAF Write token).
