@@ -29,8 +29,8 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Completed / Accepted
 
-- [ ] [16] Make Ruff and ty pass on dallape's Python and label binary sizes MiB
-      <!-- hai:{"id":"simple-13e58592-201a-4ad4-a382-25fb0d51085b","labels":["steward"],"createdAt":"2026-10-22T01:31:11.300Z","updatedAt":"2026-10-22T01:48:50.561Z"} -->
+- [x] [16] Make Ruff and ty pass on dallape's Python and label binary sizes MiB
+      <!-- hai:{"id":"simple-13e58592-201a-4ad4-a382-25fb0d51085b","labels":["steward"],"createdAt":"2026-10-22T01:31:11.300Z","updatedAt":"2026-10-22T07:51:15.184Z"} -->
 
 - [x] [15] Check dallape's documents, docstrings and comments against current main
       <!-- hai:{"id":"simple-a7cbbe23-c23d-4845-829a-6589c61ea304","labels":["steward","review"],"createdAt":"2026-10-22T00:17:01.967Z","updatedAt":"2026-10-22T03:25:21.366Z"} -->
