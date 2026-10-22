@@ -1,4 +1,4 @@
-// Optional integration check: Playwright and ffmpeg must be installed externally.
+// Optional local fixture check; requires external Playwright, Chromium and ffmpeg.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";

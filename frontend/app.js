@@ -184,7 +184,7 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     errorEl.value = "";
     render();
     try {
-      if (!v.formats) await (v.loading ??= loadFormats(v).finally(() => { if (request === submission) v.loading = null; })); // first click only, shared by concurrent clicks
+      if (!v.formats) await (v.loading ??= loadFormats(v).finally(() => { if (request === submission) v.loading = null; })); // Share pending metadata; a failed lookup can be retried.
     } catch (err) {
       if (request === submission && v.wanted === fmt.id) {
         v.wanted = null;
@@ -222,7 +222,7 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
   }
 
   // Reserve three encoded copies: chunks, Blob construction and MediaSource input.
-  // Decoder/transport allocations belong to the browser and are observed separately.
+  // Browser decoder/transport allocations are outside this accounting budget.
   function reserve(track, bytes) {
     const entries = [...videos.values()].flatMap(v => [...v.tracks.values()].map(t => [v, t]));
     let retained = entries.reduce((sum, [, t]) => sum + t.received * 3, bytes * 3);
@@ -294,8 +294,8 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     render();
   }
 
-  /** Playback owns only its attachment: the transfer keeps going as a download,
-   * and this attempt retries playback only from the completed Blob. */
+  /** Detach failed playback while its download continues.
+   * A later selection waits for the completed Blob before retrying playback. */
   function failAudio(owner, err) {
     if (attachment !== owner) return;
     const { v, track } = owner;

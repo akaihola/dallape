@@ -18,7 +18,7 @@ export const YOUTUBE_AUDIO_FORMATS = [
   { id: "251", ext: "webm", codec: "Opus", abr: 160, mime: 'audio/webm; codecs="opus"' },
 ];
 
-/** Parse a video URL or id into {provider, id}, or null when nothing matches. */
+/** Parse a supported YouTube URL or id into {provider: "youtube", id}, else null. */
 export function parseVideo(text) {
   text = text.trim();
   if (YOUTUBE_ID.test(text)) return { provider: "youtube", id: text };

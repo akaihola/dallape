@@ -1,4 +1,7 @@
-"""Dallapé backend: stateless yt-dlp proxy for listing and streaming audio tracks."""
+"""List and proxy YouTube audio without storing media files.
+
+yt-dlp may write its filesystem cache and the configured cookie file.
+"""
 
 import os
 import re
@@ -93,7 +96,7 @@ class AudioStreamError(RuntimeError):
 
 
 def read_chunks(fmt: dict):
-    """Validate each upstream response; never retry an unverified offset."""
+    """Yield validated upstream audio blocks; fail without retries."""
     headers = dict(fmt.get("http_headers") or {})
     headers["Accept-Encoding"] = "identity"
     chunk = (fmt.get("downloader_options") or {}).get("http_chunk_size")
