@@ -10,7 +10,6 @@ from time import monotonic
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import anyio
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -112,14 +111,13 @@ def read_chunks(fmt: dict):
                 end = min(start + chunk, size) - 1 if ranged else None
                 request_headers = headers | ({"Range": f"bytes={start}-{end}"} if ranged else {})
                 with ydl.urlopen(Request(fmt["url"], headers=request_headers)) as response:
-                    expected = end - start + 1 if ranged else size
+                    expected = size if end is None else end - start + 1
                     if response.status != (206 if ranged else 200):
                         raise AudioStreamError("unexpected upstream status")
                     if response.headers.get("Content-Encoding", "identity").lower() != "identity":
                         raise AudioStreamError("unexpected upstream encoding")
-                    if ranged:
-                        if response.headers.get("Content-Range") != f"bytes {start}-{end}/{size}":
-                            raise AudioStreamError("invalid upstream content range")
+                    if ranged and response.headers.get("Content-Range") != f"bytes {start}-{end}/{size}":
+                        raise AudioStreamError("invalid upstream content range")
                     length = response.headers.get("Content-Length")
                     if length is not None:
                         length = int(length)
@@ -147,10 +145,10 @@ def read_chunks(fmt: dict):
                         if pending:
                             yield pending
                         pending = data
-                if not ranged or end + 1 == size:
+                if end is None or end + 1 == size:
                     return
                 start += received
-    except Exception:
+    except Exception:  # noqa: BLE001 - every upstream failure must leave as the sanitized error
         # Do not chain networking errors: signed URLs and cookies may be in them.
         raise AudioStreamError("upstream audio stream failed") from None
 

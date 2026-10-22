@@ -428,7 +428,7 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
 
   // --- rendering -------------------------------------------------------------
 
-  const fmtSize = (bytes) => `${(bytes / 1048576).toFixed(1)} MB`;
+  const fmtSize = (bytes) => `${(bytes / 1048576).toFixed(1)} MiB`;
 
   function render() {
     if (!video) return;

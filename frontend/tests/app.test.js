@@ -524,7 +524,7 @@ test("missing metadata stays unknown, estimates are labelled and remote text sta
   assert.match(h.column(F).querySelector(".size").textContent, /Unknown size/);
   assert.equal(h.column(F).querySelector(".variant").textContent, `ID ${F.id} · ${note}`);
   assert.ok(!h.column(F).innerHTML.includes(note));
-  assert.equal(byId(h, "new").querySelector(".size").textContent, "Estimated 1.0 MB");
+  assert.equal(byId(h, "new").querySelector(".size").textContent, "Estimated 1.0 MiB");
   await complete(h, h.requests[1]);
   assert.match(h.column(F).querySelector(".download").download, /Unknown bitrate.*\.bin$/);
 });

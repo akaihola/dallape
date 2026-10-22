@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Find matching normalized bullet text under different TASKS.md headings.
 
 Usage: python3 tools/check_tasks_md.py TASKS.md
