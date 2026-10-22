@@ -19,6 +19,9 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
+- [16] Make Ruff and ty pass on dallape's Python and label binary sizes MiB
+  <!-- hai:{"id":"simple-13e58592-201a-4ad4-a382-25fb0d51085b","labels":["steward"],"createdAt":"2026-10-22T01:31:11.300Z","updatedAt":"2026-10-22T01:31:11.300Z"} -->
+
 ## Scheduled
 
 ## In Progress
@@ -89,7 +92,7 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 [2]: docs/tasks/2-gather-acceptance-evidence-for-the-5-legacy-review-queue-items.md
 
-<!-- hai:reserved-numbers:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 -->
+<!-- hai:reserved-numbers:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 -->
 
 [3]: docs/tasks/3-check-the-2026-09-19-architecture-review-s-remediation-plan-against-th.md
 
@@ -116,6 +119,8 @@ Rules for TASKS.md usage are at the bottom of the file.
 [14]: docs/tasks/14-security-scan-of-dallape-before-it-goes-public.md
 
 [15]: docs/tasks/15-check-dallape-s-documents-docstrings-and-comments-against-current-main.md
+
+[16]: docs/tasks/16-make-ruff-and-ty-pass-on-dallape-s-python-and-label-binary-sizes-mib.md
 
 ## Rules
 
