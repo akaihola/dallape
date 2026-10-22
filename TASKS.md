@@ -19,10 +19,10 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
-- [16] Make Ruff and ty pass on dallape's Python and label binary sizes MiB
-  <!-- hai:{"id":"simple-13e58592-201a-4ad4-a382-25fb0d51085b","labels":["steward"],"createdAt":"2026-10-22T01:31:11.300Z","updatedAt":"2026-10-22T01:31:11.300Z"} -->
-
 ## Scheduled
+
+- [16] Make Ruff and ty pass on dallape's Python and label binary sizes MiB
+  <!-- hai:{"id":"simple-13e58592-201a-4ad4-a382-25fb0d51085b","labels":["steward"],"createdAt":"2026-10-22T01:31:11.300Z","updatedAt":"2026-10-22T01:45:07.264Z"} -->
 
 ## In Progress
 
