@@ -19,10 +19,10 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
-- [15] Check dallape's documents, docstrings and comments against current main
-  <!-- hai:{"id":"simple-a7cbbe23-c23d-4845-829a-6589c61ea304","labels":["steward","review"],"createdAt":"2026-10-22T00:17:01.967Z","updatedAt":"2026-10-22T00:17:01.967Z"} -->
-
 ## Scheduled
+
+- [15] Check dallape's documents, docstrings and comments against current main
+  <!-- hai:{"id":"simple-a7cbbe23-c23d-4845-829a-6589c61ea304","labels":["steward","review"],"createdAt":"2026-10-22T00:17:01.967Z","updatedAt":"2026-10-22T00:40:14.567Z"} -->
 
 ## In Progress
 
