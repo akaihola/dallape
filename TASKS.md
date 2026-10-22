@@ -23,14 +23,14 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In Progress
 
-- [~] [16] Make Ruff and ty pass on dallape's Python and label binary sizes MiB
-      <!-- hai:{"id":"simple-13e58592-201a-4ad4-a382-25fb0d51085b","labels":["steward"],"createdAt":"2026-10-22T01:31:11.300Z","updatedAt":"2026-10-22T01:45:37.666Z"} -->
-
 - [~] [*] Deploy the scanner-probe WAF rule defined in
       `docs/tasks/1-scaleway-deployment.md` (needs a Zone WAF Write token).
       <!-- hai:{"id":"simple-f44c0a9406fd9745","updatedAt":"2026-10-19T15:29:01.637Z"} -->
 
 ## Completed / Accepted
+
+- [ ] [16] Make Ruff and ty pass on dallape's Python and label binary sizes MiB
+      <!-- hai:{"id":"simple-13e58592-201a-4ad4-a382-25fb0d51085b","labels":["steward"],"createdAt":"2026-10-22T01:31:11.300Z","updatedAt":"2026-10-22T01:48:50.561Z"} -->
 
 - [ ] [15] Check dallape's documents, docstrings and comments against current main
       <!-- hai:{"id":"simple-a7cbbe23-c23d-4845-829a-6589c61ea304","labels":["steward","review"],"createdAt":"2026-10-22T00:17:01.967Z","updatedAt":"2026-10-22T00:53:20.239Z"} -->
