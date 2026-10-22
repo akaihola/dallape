@@ -94,6 +94,20 @@ was clarified and the check rerun successfully.
 - **Document validation 1:** `python3` (stdin Markdown/link and preserved-file audit). Outcome: started at once; wait 0.0 s; MemAvailable admission 2732.6 MiB, final 2727.7 MiB; starting swap 2423.2 MiB, maximum observed growth 0.0 MiB; elapsed 0.2 s; exit 1.
 - **Document validation 2:** `python3` (stdin Markdown/link and preserved-file audit). Outcome: started at once; wait 0.0 s; MemAvailable admission 2547.6 MiB, final 2546.9 MiB; starting swap 2423.4 MiB, maximum observed growth 0.0 MiB; elapsed 0.2 s; exit 0.
 
+### Main integration and completion
+
+Audit commit `e241e71` was fast-forwarded to canonical `main`. No concurrent
+application changes landed, so the verified application/test snapshot is the
+one merged. The canonical tracker check passed immediately before the exact
+completion command and again after it. Completion commit `72f1172` moved this
+issue to `Completed / Accepted` with `[ ]`; Hai readback confirms the state and
+the tracker has no uncommitted changes. User acceptance was not checked.
+The branch and worktree are retained and synchronized with main.
+
+No owner action is needed for this audit. The steward can triage the review's
+draft follow-ups; pre-existing Ruff/ty diagnostics and the separate release
+gates remain recorded rather than silently claimed as passing.
+
 [documentation review]: ../reviews/2026-10-22-docs-review.md
 [audio contract]: ../audio-contract.md
 [development guide]: ../development.md
