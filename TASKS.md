@@ -23,14 +23,14 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## In Progress
 
-- [~] [17] Background tab audio stutter on Firefox
-      <!-- hai:{"id":"simple-694efe55-4ec6-41bf-a0a7-6dc9ab0a37f2","priority":"none","labels":[],"createdAt":"2026-10-24T07:11:53.138Z","updatedAt":"2026-10-24T07:12:09.116Z"} -->
-
 - [~] [*] Deploy the scanner-probe WAF rule defined in
       `docs/tasks/1-scaleway-deployment.md` (needs a Zone WAF Write token).
       <!-- hai:{"id":"simple-f44c0a9406fd9745","updatedAt":"2026-10-19T15:29:01.637Z"} -->
 
 ## Completed / Accepted
+
+- [ ] [17] Background tab audio stutter on Firefox
+      <!-- hai:{"id":"simple-694efe55-4ec6-41bf-a0a7-6dc9ab0a37f2","priority":"none","labels":[],"createdAt":"2026-10-24T07:11:53.138Z","updatedAt":"2026-10-24T07:45:57.055Z"} -->
 
 - [x] [16] Make Ruff and ty pass on dallape's Python and label binary sizes MiB
       <!-- hai:{"id":"simple-13e58592-201a-4ad4-a382-25fb0d51085b","labels":["steward"],"createdAt":"2026-10-22T01:31:11.300Z","updatedAt":"2026-10-22T07:51:15.184Z"} -->

@@ -118,3 +118,24 @@ without the guard, under `timeout 200`. It ended with exit 1 after about
 30 s. MemAvailable was above 9.9 GiB before and after the guarded runs on
 either side. The red check of the new test against the unpatched `app.js` and
 the tracker check are short, light commands and also ran without the guard.
+
+### Checks at the merged commit
+
+Merged into `main` as a fast-forward from `d1e55ef` to `3d75633`. Recorded
+with `check-evidence.py record` from the task worktree detached at `3d75633`;
+receipt: [the evidence file](17-background-tab-audio-stutter-on-firefox.evidence.json).
+
+- **frontend-tests:** `node --test frontend/tests/*.test.js`: pass, exit 0
+  (40 passed).
+- **backend-tests:** `cd backend && uv run --frozen pytest -q`: pass, exit 0
+  (70 passed, one known deprecation warning); `backend/uv.lock` sha256
+  `8375ce45…`.
+- **tasks-md:** `python3 tools/check_tasks_md.py TASKS.md`: pass, exit 0.
+
+Memory reports for the record calls; each started at once, with no wait:
+
+| Check | Admission | Final | Start swap | Swap growth | Elapsed | Exit |
+| --- | --- | --- | --- | --- | --- | --- |
+| frontend-tests | 9953 MiB | 9821 MiB | 1619 MiB | 0 MiB | 2 s | 0 |
+| backend-tests | 9821 MiB | 9715 MiB | 1619 MiB | 0 MiB | 2 s | 0 |
+| tasks-md | 9715 MiB | 9842 MiB | 1619 MiB | -1 MiB | 2 s | 0 |
