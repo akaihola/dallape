@@ -19,6 +19,9 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Ordered backlog
 
+- [17] Background tab audio stutter on Firefox
+  <!-- hai:{"id":"simple-694efe55-4ec6-41bf-a0a7-6dc9ab0a37f2","priority":"none","labels":[],"createdAt":"2026-10-24T07:11:53.138Z","updatedAt":"2026-10-24T07:11:53.138Z"} -->
+
 ## Scheduled
 
 ## In Progress
@@ -93,7 +96,7 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 [2]: docs/tasks/2-gather-acceptance-evidence-for-the-5-legacy-review-queue-items.md
 
-<!-- hai:reserved-numbers:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 -->
+<!-- hai:reserved-numbers:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17 -->
 
 [3]: docs/tasks/3-check-the-2026-09-19-architecture-review-s-remediation-plan-against-th.md
 
@@ -122,6 +125,8 @@ Rules for TASKS.md usage are at the bottom of the file.
 [15]: docs/tasks/15-check-dallape-s-documents-docstrings-and-comments-against-current-main.md
 
 [16]: docs/tasks/16-make-ruff-and-ty-pass-on-dallape-s-python-and-label-binary-sizes-mib.md
+
+[17]: docs/tasks/17-background-tab-audio-stutter-on-firefox.md
 
 ## Rules
 

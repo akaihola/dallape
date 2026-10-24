@@ -1,0 +1,1 @@
+As soon as I switch to another browser tab on Firefox, the audio starts to stutter. Chromium is ok.
