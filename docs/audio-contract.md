@@ -32,6 +32,10 @@ MediaSource starts decoding during transfer when the browser supports the MIME
 type. Otherwise, playback waits for the completed Blob to decode and buffer.
 Pausing, seeking outside the buffer or waiting for decoded data restores the
 original sound. Playback rate and volume follow the YouTube player every 250 ms.
+While the page is hidden, a playing replacement keeps its own position instead
+of seeking to the player's. Firefox throttles the muted player in a background
+tab, and its reported time lags. Pausing still stops the replacement; the next
+start and a visible page follow the player's position again.
 The player's mute setting at attachment is preserved for both replacement and
 restored original sound. Set the desired mute state before selecting a track:
 the iframe is internally muted during comparison. Volume and pause controls

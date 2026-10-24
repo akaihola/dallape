@@ -385,7 +385,10 @@ export function startApp({ window, document, fetch, URL, Blob, setInterval, setT
     const owner = attachment;
     if (!owner || !playerUsable) return;
     try {
-      const t = player.getCurrentTime();
+      // Firefox throttles the muted player in a hidden tab, so its reported time
+      // lags and would keep seeking the replacement back. An active replacement
+      // keeps its own position until the page is visible again.
+      const t = document.hidden && activeFormat === owner.track.fmt.id && !audio.paused ? audio.currentTime : player.getCurrentTime();
       const playing = player.getPlayerState() === window.YT.PlayerState.PLAYING;
       audio.playbackRate = player.getPlaybackRate();
       audio.volume = player.getVolume() / 100;

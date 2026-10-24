@@ -407,6 +407,26 @@ test("pause, resume, seeks outside buffered ranges, speed and volume preserve or
   h.audio.readyState = 2; h.audio.onwaiting(); assert.equal(p.muted, false);
 });
 
+test("a hidden page keeps active audio on its own clock while the player's time lags", async () => {
+  const h = setup({ mse: true }); await h.preview(); await h.loadTrack();
+  const p = h.players[0];
+  await h.playable(0, 100); assert.equal(p.muted, true);
+  h.document.hidden = true;
+  for (const [audio, player] of [[1, 0.5], [2, 1.5], [3, 1.5], [5, 2]]) {
+    h.audio.currentTime = audio; p.time = player; h.tick();
+    assert.equal(h.audio.currentTime, audio); assert.equal(p.muted, true);
+    assert.equal(h.column(F).classes.has("active"), true);
+  }
+  p.state = 2; h.tick();
+  assert.equal(h.audio.paused, true); assert.equal(p.muted, false);
+  p.state = 1; h.tick();
+  assert.equal(h.audio.currentTime, 2);
+  await h.playable(0, 100); assert.equal(p.muted, true);
+  h.document.hidden = false;
+  h.audio.currentTime = 4; p.time = 3; h.tick();
+  assert.equal(h.audio.currentTime, 3);
+});
+
 test("selection during transfer retires delayed sourceopen and completed Blob waits for readiness", async () => {
   const h = setup({ mse: true }); await h.preview(); await h.loadTrack();
   const retired = h.sources[0];
