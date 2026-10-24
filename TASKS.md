@@ -74,8 +74,9 @@ Rules for TASKS.md usage are at the bottom of the file.
 - [x] [2] Gather acceptance evidence for the 5 legacy review-queue items
       <!-- hai:{"id":"simple-365744dc-1e09-4c8c-a42e-0f545e074764","labels":["steward"],"createdAt":"2026-10-17T20:09:29.021Z","updatedAt":"2026-10-21T17:11:47.796Z"} -->
 
-- [ ] [1] Deploy and validate the app on a Scaleway Serverless Container behind a
+- [x] [1] Deploy and validate the app on a Scaleway Serverless Container behind a
   Cloudflare loading Worker, following drum-transcribe.
+      <!-- hai:{"updatedAt":"2026-10-24T07:09:36.901Z"} -->
 - [ ] [*] Retry what task 5f5f0c2e-1492-41fc-bc30-4d7209808ebf tried, but now with `, scw`.
 - [ ] [*] If on a NixOS host with no `scw` installed but `comma` available, always use
   `, scw` instead of just `scw`.
