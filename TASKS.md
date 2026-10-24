@@ -21,10 +21,10 @@ Rules for TASKS.md usage are at the bottom of the file.
 
 ## Scheduled
 
-- [17] Background tab audio stutter on Firefox
-  <!-- hai:{"id":"simple-694efe55-4ec6-41bf-a0a7-6dc9ab0a37f2","priority":"none","labels":[],"createdAt":"2026-10-24T07:11:53.138Z","updatedAt":"2026-10-24T07:12:02.526Z"} -->
-
 ## In Progress
+
+- [~] [17] Background tab audio stutter on Firefox
+      <!-- hai:{"id":"simple-694efe55-4ec6-41bf-a0a7-6dc9ab0a37f2","priority":"none","labels":[],"createdAt":"2026-10-24T07:11:53.138Z","updatedAt":"2026-10-24T07:12:09.116Z"} -->
 
 - [~] [*] Deploy the scanner-probe WAF rule defined in
       `docs/tasks/1-scaleway-deployment.md` (needs a Zone WAF Write token).
