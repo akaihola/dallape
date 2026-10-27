@@ -13,9 +13,10 @@
   <p>Compare and download video sound tracks in various formats.</p>
 </header>
 <form id="video-form">
+  <label for="video-input">YouTube URL or video ID</label>
   <input id="video-input" type="text" placeholder="YouTube URL or video ID" autocomplete="off" spellcheck="false" required>
   <button type="submit">Preview</button>
-  <output id="video-error"></output>
+  <output id="video-error" role="status"></output>
 </form>
 <div id="player-wrap" hidden><div id="player"></div></div>
 <p id="hint" hidden>Click an audio format to hear the video with that track. The ring fills as the track downloads; the dot marks the playback position.</p>

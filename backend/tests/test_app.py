@@ -81,7 +81,7 @@ def test_audio_unknown_format(canned, fmt):
 
 
 def test_audio_streams(canned, monkeypatch):
-    monkeypatch.setattr(backend, "read_chunks", lambda fmt: iter([b"ab", b"cde"]))
+    monkeypatch.setattr(backend, "read_chunks", lambda fmt: (data for data in [b"ab", b"cde"]))
     r = client.get("/api/audio", params={"url": VIDEO_ID, "format": "251"})
     assert r.status_code == 200
     assert r.content == b"abcde"
@@ -96,8 +96,83 @@ def test_read_chunks_uses_ranges(monkeypatch):
     def fake_urlopen(self, req):
         ranges.append(req.headers["Range"])
         start, end = map(int, req.headers["Range"][6:].split("-"))
-        return io.BytesIO(b"abcde"[start:end + 1])
+        return Upstream(b"abcde"[start:end + 1], 206, {"Content-Range": f"bytes {start}-{end}/5"})
 
     monkeypatch.setattr(backend.YoutubeDL, "urlopen", fake_urlopen)
     assert b"".join(backend.read_chunks(INFO["formats"][2])) == b"abcde"
     assert ranges == ["bytes=0-1", "bytes=2-3", "bytes=4-4"]
+
+
+class Upstream(io.BytesIO):
+    def __init__(self, data=b"abcde", status=200, headers=None, fail=False):
+        super().__init__(data)
+        self.status = status
+        self.headers = headers or {}
+        self.fail = fail
+
+    def read(self, size):
+        if self.fail:
+            raise OSError("secret signed URL and cookie")
+        return super().read(size)
+
+
+@pytest.mark.parametrize("text", [
+    "https://[youtube.com/watch?v=" + VIDEO_ID,
+    "https://youtube.com:bad/watch?v=" + VIDEO_ID,
+    "https://youtube.com:99999/watch?v=" + VIDEO_ID,
+    "https://user:password@youtube.com/watch?v=" + VIDEO_ID,
+    "https://youtube.com:123/watch?v=" + VIDEO_ID,
+    "ftp://youtube.com/watch?v=" + VIDEO_ID,
+    "https://youtube.com＠evil.example/watch?v=" + VIDEO_ID,
+])
+def test_malformed_authority_parity(text):
+    assert backend.parse_youtube(text) is None
+    for endpoint in ("formats", "audio"):
+        assert client.get(f"/api/{endpoint}", params={"url": text, "format": "140"}).status_code == 400
+
+
+def test_captured_multilingual_contract_and_audio_selection(monkeypatch):
+    import json
+    from pathlib import Path
+    from urllib.parse import unquote
+
+    info = json.loads((Path(__file__).resolve().parents[2] / "frontend/tests/fixtures/youtube-multilingual.json").read_text())
+    projected = backend.audio_formats(info)
+    for raw, fmt in zip(info["formats"], projected, strict=True):
+        assert all(fmt[key] == raw[key] for key in fmt)
+        assert unquote(backend.download_filename(info, raw)) == fmt["filename"]
+    assert len({f["filename"] for f in projected}) == len(projected)
+    monkeypatch.setattr(backend, "extract", lambda _: info)
+    selected = []
+    monkeypatch.setattr(backend, "read_chunks", lambda fmt: selected.append(fmt["format_id"]) or (chunk for chunk in [b"abc"]))
+    for fmt in info["formats"]:
+        fmt["filesize"] = 3
+        result = client.get("/api/audio", params={"url": info["id"], "format": fmt["format_id"]})
+        assert result.status_code == 200
+        assert result.headers["content-type"] == fmt["mime"].split(";")[0]
+        assert unquote(result.headers["content-disposition"].split("''")[1]) == fmt["filename"]
+    assert selected == [f["format_id"] for f in info["formats"]]
+
+
+def test_missing_bitrate_and_sizes_remain_unknown(monkeypatch):
+    fmt = {"format_id": "unknown-id", "ext": "webm", "acodec": "opus", "vcodec": "none", "protocol": "http"}
+    info = {"id": VIDEO_ID, "formats": [fmt]}
+    monkeypatch.setattr(backend, "extract", lambda _: info)
+    monkeypatch.setattr(backend, "read_chunks", lambda _: (chunk for chunk in [b"abc"]))
+    result = client.get("/api/formats", params={"url": VIDEO_ID}).json()["formats"][0]
+    assert all(result[k] is None for k in ("abr", "filesize", "filesize_approx", "language", "format_note", "audio_channels"))
+    assert result["filename"] == f"{VIDEO_ID} Unknown bitrate.webm"
+    audio = client.get("/api/audio", params={"url": VIDEO_ID, "format": "unknown-id"})
+    assert audio.status_code == 200
+    assert "content-length" not in audio.headers
+
+
+@pytest.mark.parametrize("changes", [
+    {"protocol": "m3u8_native"}, {"protocol": "http_dash_segments"}, {"protocol": "ftp"},
+    {"vcodec": "avc1"}, {"acodec": "none"}, {"acodec": None},
+])
+def test_format_allowlist_cannot_be_bypassed_by_unknown_ids(monkeypatch, changes):
+    fmt = INFO["formats"][1] | {"format_id": "new-variant"} | changes
+    monkeypatch.setattr(backend, "extract", lambda _: INFO | {"formats": [fmt]})
+    assert client.get("/api/formats", params={"url": VIDEO_ID}).json()["formats"] == []
+    assert client.get("/api/audio", params={"url": VIDEO_ID, "format": "new-variant"}).status_code == 404

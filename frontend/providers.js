@@ -1,10 +1,10 @@
-// Video providers. YouTube is the only one so far and the fallback for bare ids.
+// YouTube URL parsing and speculative audio columns.
 
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"]);
 const YOUTUBE_PATHS = ["/shorts/", "/embed/", "/live/", "/v/"];
 
-// Known YouTube audio-only itags. yt-dlp no longer ships this table, so it is data here.
+// Nominal estimates until the backend supplies metadata for the selected video.
 export const YOUTUBE_AUDIO_FORMATS = [
   { id: "599", ext: "m4a", codec: "HE-AAC", abr: 30, mime: 'audio/mp4; codecs="mp4a.40.5"' },
   { id: "139", ext: "m4a", codec: "HE-AAC", abr: 48, mime: 'audio/mp4; codecs="mp4a.40.5"' },
@@ -18,7 +18,7 @@ export const YOUTUBE_AUDIO_FORMATS = [
   { id: "251", ext: "webm", codec: "Opus", abr: 160, mime: 'audio/webm; codecs="opus"' },
 ];
 
-/** Parse a video URL or id into {provider, id}, or null when nothing matches. */
+/** Parse a supported YouTube URL or id into {provider: "youtube", id}, else null. */
 export function parseVideo(text) {
   text = text.trim();
   if (YOUTUBE_ID.test(text)) return { provider: "youtube", id: text };
@@ -28,6 +28,7 @@ export function parseVideo(text) {
   } catch {
     return null;
   }
+  if (!["http:", "https:"].includes(u.protocol) || u.username || u.password || !["", "80", "443"].includes(u.port)) return null;
   if (!YOUTUBE_HOSTS.has(u.hostname)) return null;
   let id = "";
   if (u.hostname === "youtu.be") id = u.pathname.split("/")[1] ?? "";

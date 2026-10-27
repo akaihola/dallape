@@ -1,14 +1,14 @@
-#!/usr/bin/env python3
-"""Check that TASKS.md keeps each issue bullet under exactly one heading.
+"""Find matching normalized bullet text under different TASKS.md headings.
 
 Usage: python3 tools/check_tasks_md.py TASKS.md
 
-The script reads only the issue-tracking part of the file, from the
-first `## ` heading up to the `---` line before `## Rules`. It ignores
-that later part, because it holds rule text, not issue bullets.
+Read bullets after the first `## ` heading and stop at the first `---`
+line. Drop one leading bracketed marker and join eligible continuation
+lines before comparing text; issue IDs are not compared separately.
 
-The script prints each duplicated bullet and the headings it is under.
-It exits with status 1 if it finds a duplicate, else status 0.
+Print text found under multiple headings and exit 1, or exit 0 if none
+is found. Repeated text within one heading is not reported. Wrong argument
+count exits 2; this is not a complete tracker-rule validator.
 """
 import re
 import sys

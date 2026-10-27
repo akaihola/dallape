@@ -4,6 +4,7 @@ body { margin: 0 auto; max-width: 64rem; padding: 1.5rem 1rem 3rem; font: 16px/1
 h1 { margin: 0 0 .25rem; font-size: 2rem; }
 header p, #hint { margin: 0 0 1rem; color: var(--muted); }
 #video-form { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+#video-form label { flex-basis: 100%; }
 #video-input { flex: 1 1 20rem; padding: .5rem .75rem; font: inherit; border: 1px solid var(--disabled); border-radius: .4rem; }
 button { padding: .5rem 1rem; font: inherit; border: 0; border-radius: .4rem; background: var(--accent); color: #fff; cursor: pointer; }
 button:disabled { background: var(--disabled); cursor: not-allowed; }
@@ -21,5 +22,8 @@ button:disabled { background: var(--disabled); cursor: not-allowed; }
 .ring .pos { fill: var(--fg); visibility: hidden; }
 .format.active .ring .pos { visibility: visible; }
 .codec { font-weight: 600; }
-.abr, .ext, .size { font-size: .85rem; color: var(--muted); }
+.abr, .ext, .size, .variant, .status { font-size: .85rem; color: var(--muted); }
 .download { font-size: .85rem; color: var(--accent); }
+
+.format[hidden] { display: none; }
+.variant, .status { text-align: center; overflow-wrap: anywhere; }

@@ -146,6 +146,67 @@ not measured. To measure them, wait until Cockpit shows no requests for
 20 minutes (query `{resource_id="<container id>"}`), then load the page. A
 new `resource_instance` name in the logs confirms that the start was cold.
 
+## Block scanner probes with Cloudflare WAF
+
+Keep the `dallape` DNS record proxied. Add an enabled custom rule named
+`Dallape: block secret and repository probes` to the `vempai.men` zone's
+`http_request_firewall_custom` entry point ruleset, with action `block`:
+
+```json
+{
+  "description": "Dallape: block secret and repository probes",
+  "expression": "(http.host eq \"dallape.vempai.men\") and (starts_with(http.request.uri.path, \"/.env\") or starts_with(http.request.uri.path, \"/.git/\"))",
+  "action": "block",
+  "enabled": true
+}
+```
+
+Follow Cloudflare's [custom rule API procedure](https://developers.cloudflare.com/waf/custom-rules/create-api/)
+using a token with **Zone WAF Write** permission for `vempai.men`. The Worker
+and DNS token described above may need this additional permission.
+
+1. Read `GET /zones/3fa2d208da5e2dfccce10a401b4036fa/rulesets/phases/http_request_firewall_custom/entrypoint`
+   under `https://api.cloudflare.com/client/v4`.
+2. If the ruleset exists, add the JSON above with
+   `POST /zones/<zone_id>/rulesets/<ruleset_id>/rules`. If this named rule
+   already exists, update that rule with `PATCH` at the same path plus
+   `/<rule_id>` instead of adding a duplicate. Preserve every other rule.
+3. Only if the entry point returns 404, create it with
+   `POST /zones/<zone_id>/rulesets`, using `name: "Zone custom rules"`,
+   `kind: "zone"`, `phase: "http_request_firewall_custom"` and a `rules` array
+   containing the JSON above. Stop on authentication or permission errors.
+4. Place this rule before any Skip rule that bypasses remaining custom
+   rules. Read back the ruleset to verify the expression, action, enabled
+   state and order; record its ruleset and rule IDs after deployment.
+
+The [starts_with function](https://developers.cloudflare.com/ruleset-engine/rules-language/functions/#starts_with)
+matches `/.env`, `/.env.local`, `/.env.bak`, `/.git/`, `/.git/HEAD` and
+`/.git/config`, for any HTTP method and query string. These requests should
+stop at Cloudflare before reaching the Worker or waking Scaleway. The host
+condition applies to both path prefixes and leaves other zone hostnames
+unaffected. `/`, frontend assets and `/api/*` do not match; query strings
+containing these probe names do not match on their own.
+
+After deployment, check the blocked paths with:
+
+```bash
+for path in /.env /.env.local /.env.bak /.git/ /.git/HEAD /.git/config; do
+  curl --path-as-is --silent --show-error --output /dev/null \
+    --write-out "$path %{http_code}\n" "https://dallape.vempai.men$path"
+done
+```
+
+Expect HTTP 403. Confirm the requests match this rule in Cloudflare Security
+Events and do not appear in Scaleway request logs; a 403 alone does not prove
+WAF blocking. Verify `/`, `/app.js`, `/style.css` and `/api/health` still
+return 200 and formats/audio still work. For rollback, disable only this
+custom rule, leaving DNS proxying and Worker routes in place.
+
+Deployment pending as of 2026-09-27: this gogo session has no Cloudflare token
+in its environment or at the documented local secret-file path. An SSH
+attempt to atom failed with `agent refused operation` and `Permission denied`.
+The rule is defined here but live WAF blocking has not been verified.
+
 ## Earlier attempts
 
 The earlier attempt was blocked at provider deployment: the documented

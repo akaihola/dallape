@@ -1,6 +1,6 @@
-// Page loads that the app doesn't answer within WAIT_MS (the container is
-// asleep and starting) get a "Starting up…" page instead of a blank tab.
-// Everything else passes through untouched; /api/* never reaches the Worker.
+// Navigation requests get a "Starting up…" page after WAIT_MS, a fetch failure,
+// or an upstream status >= 502. Other requests pass through untouched.
+// The separately configured no-Worker route must keep /api/* out of this handler.
 
 const WAIT_MS = 2500;
 

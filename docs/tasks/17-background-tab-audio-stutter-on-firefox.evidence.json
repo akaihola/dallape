@@ -1,0 +1,78 @@
+{
+  "items": [
+    {
+      "issue": "dallape [17]",
+      "hai_id": "simple-694efe55-4ec6-41bf-a0a7-6dc9ab0a37f2",
+      "title": "Background tab audio stutter on Firefox",
+      "repository": "/home/agent/.t3/worktrees/dallape/pacer-17-background-tab-audio-stutter-on-firefox-da2676e7",
+      "source_repository": "/home/agent/prg/dallape",
+      "base_commit": "d1e55ef84f2d92802dfc7de4eae0af9cc221dedf",
+      "delivery_commits": [
+        "3d756337d280be5bdc6532e9cc49a6db46f245a9"
+      ],
+      "checks": [
+        {
+          "id": "frontend-tests",
+          "command": "node --test frontend/tests/*.test.js",
+          "dependencies": {}
+        },
+        {
+          "id": "backend-tests",
+          "command": "cd backend && uv run --frozen pytest -q",
+          "dependencies": {
+            "lock": {
+              "kind": "sha256",
+              "path": "backend/uv.lock"
+            }
+          }
+        },
+        {
+          "id": "tasks-md",
+          "command": "python3 tools/check_tasks_md.py TASKS.md",
+          "dependencies": {}
+        }
+      ],
+      "evidence": {
+        "frontend-tests": {
+          "repository": "/home/agent/.t3/worktrees/dallape/pacer-17-background-tab-audio-stutter-on-firefox-da2676e7",
+          "tested_commit": "3d756337d280be5bdc6532e9cc49a6db46f245a9",
+          "dependencies": {},
+          "issue": "dallape [17]",
+          "check": "frontend-tests",
+          "command": "node --test frontend/tests/*.test.js",
+          "result": "pass",
+          "exit_code": 0,
+          "timestamp": "2026-10-24T07:45:35.665486+00:00"
+        },
+        "backend-tests": {
+          "repository": "/home/agent/.t3/worktrees/dallape/pacer-17-background-tab-audio-stutter-on-firefox-da2676e7",
+          "tested_commit": "3d756337d280be5bdc6532e9cc49a6db46f245a9",
+          "dependencies": {
+            "lock": {
+              "kind": "sha256",
+              "path": "/home/agent/.t3/worktrees/dallape/pacer-17-background-tab-audio-stutter-on-firefox-da2676e7/backend/uv.lock",
+              "value": "8375ce45ec71d86dae62e01ab82ed7e6ec001f998a82ec5b02ff788734246564"
+            }
+          },
+          "issue": "dallape [17]",
+          "check": "backend-tests",
+          "command": "cd backend && uv run --frozen pytest -q",
+          "result": "pass",
+          "exit_code": 0,
+          "timestamp": "2026-10-24T07:45:39.391782+00:00"
+        },
+        "tasks-md": {
+          "repository": "/home/agent/.t3/worktrees/dallape/pacer-17-background-tab-audio-stutter-on-firefox-da2676e7",
+          "tested_commit": "3d756337d280be5bdc6532e9cc49a6db46f245a9",
+          "dependencies": {},
+          "issue": "dallape [17]",
+          "check": "tasks-md",
+          "command": "python3 tools/check_tasks_md.py TASKS.md",
+          "result": "pass",
+          "exit_code": 0,
+          "timestamp": "2026-10-24T07:45:39.559435+00:00"
+        }
+      }
+    }
+  ]
+}
