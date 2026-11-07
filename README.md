@@ -1,5 +1,7 @@
 # Dallapé – audio format comparison and download
 
+> This is a prototype developed using AI coding agents and not intended for production use.
+
 [dallape.vempai.men] compares and downloads YouTube audio tracks in the browser.
 Enter a supported YouTube URL or an 11-character video ID and select **Preview**.
 Click an audio format to fetch it; the first click also checks which formats are
